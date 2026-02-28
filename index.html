@@ -3,152 +3,97 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI 灵感便利贴 - 马卡龙版</title>
+    <title>AI 灵感便利贴 - 高级节点连线版</title>
     <style>
         /* ================= 定义马卡龙主题色系 ================= */
         :root {
-            --bg-color: #f9fbfd; /* 极浅的米白背景 */
-            --grid-color: #e8ebed; /* 浅灰网格线 */
-            --text-primary: #2c3e50; /* 深灰文字 */
-            --text-secondary: #546e7a; /* 次要文字 */
-            --sidebar-bg: #ffffff; /* 纯白侧边栏 */
-            --input-bg: #f0f4f8; /* 浅灰输入框背景 */
+            --bg-color: #f9fbfd; 
+            --grid-color: #e8ebed; 
+            --text-primary: #2c3e50; 
+            --text-secondary: #546e7a; 
+            --sidebar-bg: #ffffff; 
+            --input-bg: #f0f4f8; 
             --border-light: #e1e6eb;
-            
-            /* 马卡龙配色 */
-            --m-purple: #9c8cf2; /* 主按钮紫 */
-            --m-purple-light: #d1c4e9; /* 视频便签头 */
-            --m-purple-bg: #ede7f6; /* 视频便签体 */
-            
-            --m-blue: #64b5f6; /* 强调蓝 */
-            --m-blue-light: #90caf9; /* 图片便签头 */
-            --m-blue-bg: #e3f2fd; /* 图片便签体 */
-            
-            --m-pink: #ff80ab; /* 删除按钮粉 */
-            
-            --shadow-soft: 0 8px 24px rgba(149, 157, 165, 0.1); /* 柔和阴影 */
+            --m-purple: #9c8cf2; --m-purple-light: #d1c4e9; --m-purple-bg: #ede7f6; 
+            --m-blue: #64b5f6; --m-blue-light: #90caf9; --m-blue-bg: #e3f2fd; 
+            --m-pink: #ff80ab; 
+            --shadow-soft: 0 8px 24px rgba(149, 157, 165, 0.1);
         }
 
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: var(--bg-color); color: var(--text-primary); user-select: none; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-primary); user-select: none; }
         
-        /* ================= 无限画布 (网格纸风格) ================= */
-        #viewport { 
-            position: absolute; left: 360px; right: 0; top: 0; bottom: 0; overflow: hidden; cursor: grab; 
-            background-color: var(--bg-color);
-            /* CSS绘制网格纸效果 */
-            background-image: linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-            background-size: 25px 25px;
-        }
+        /* ================= 无限画布 ================= */
+        #viewport { position: absolute; left: 360px; right: 0; top: 0; bottom: 0; overflow: hidden; cursor: grab; background-color: var(--bg-color); background-image: linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px); background-size: 25px 25px; }
         #canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
         
-        /* ================= 便签风格卡片节点 ================= */
-        .node-card { 
-            position: absolute; 
-            background: #fff; /* 默认白底 */
-            border: none; /* 去掉硬边框 */
-            border-radius: 16px; /* 更圆润的角 */
-            box-shadow: 2px 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05); /* 双重柔和阴影，制造纸张悬浮感 */
-            min-width: 260px; max-width: 320px; 
-            display: flex; flex-direction: column; overflow: hidden; 
-            transition: transform 0.1s;
+        /* ================= 高级浮动菜单 (深色极客风) ================= */
+        .context-menu {
+            position: absolute; display: none; z-index: 2000;
+            background: rgba(30, 30, 30, 0.95); backdrop-filter: blur(15px);
+            border: 1px solid #444; border-radius: 12px; padding: 10px;
+            color: white; box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            width: 160px; transform-origin: top left; animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .node-card:hover { transform: translateY(-2px); /* 鼠标悬停轻微上浮 */ }
-
-        .node-header { 
-            padding: 12px 15px; 
-            /* 头部颜色根据类型变化 */
-            background: #f0f0f0; 
-            color: #444;
-            font-weight: 600;
-            border-bottom: 1px solid rgba(0,0,0,0.05); 
-            display: flex; justify-content: space-between; align-items: center; cursor: move; 
-        }
-        .node-title { font-size: 14px; }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .context-menu .menu-title { font-size: 12px; color: #aaa; padding: 4px 10px 10px; border-bottom: 1px solid #444; margin-bottom: 6px; }
+        .context-menu .menu-item { padding: 10px 12px; font-size: 14px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; color: #eee; }
+        .context-menu .menu-item:hover { background: #444; color: #fff; }
         
-        /* 图片便签 - 马卡龙蓝风格 */
+        /* ================= 节点卡片 ================= */
+        .node-card { 
+            position: absolute; background: #fff; border-radius: 16px; 
+            box-shadow: 2px 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05); 
+            min-width: 260px; max-width: 320px; display: flex; flex-direction: column; transition: transform 0.1s;
+        }
+        .node-card:hover { transform: translateY(-2px); }
+        .node-header { padding: 12px 15px; background: #f0f0f0; border-radius: 16px 16px 0 0; color: #444; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; cursor: move; }
         .node-header.img-node { background: var(--m-blue-light); color: #fff; }
-        /* 通过兄弟选择器，让卡片主体也变成淡蓝色 */
-        .node-card:has(.img-node) .node-body, .node-card:has(.img-node) .node-actions { background: var(--m-blue-bg); }
-
-        /* 视频便签 - 马卡龙紫风格 */
+        .node-card:has(.img-node) .node-body, .node-card:has(.img-node) .node-actions { background: var(--m-blue-bg); border-radius: 0 0 16px 16px;}
         .node-header.vid-node { background: var(--m-purple-light); color: #fff; }
-        .node-card:has(.vid-node) .node-body, .node-card:has(.vid-node) .node-actions { background: var(--m-purple-bg); }
-
-        .node-body { padding: 15px; font-size: 13px; color: var(--text-primary); }
+        .node-card:has(.vid-node) .node-body, .node-card:has(.vid-node) .node-actions { background: var(--m-purple-bg); border-radius: 0 0 16px 16px;}
+        .node-body { padding: 15px; font-size: 13px; color: var(--text-primary); position: relative; }
         .node-body img, .node-body video { width: 100%; border-radius: 12px; margin-top: 10px; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         
-        .node-actions { padding: 10px 15px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; gap: 10px; background: #fff;}
-        .action-btn { 
-            flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; transition: 0.2s; font-weight: 600;
-            background: #fff; color: var(--text-secondary); box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        }
+        .node-actions { padding: 10px 15px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; gap: 10px; }
+        .action-btn { flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; transition: 0.2s; font-weight: 600; background: #fff; color: var(--text-secondary); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
         .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.12); color: var(--m-blue); }
         .action-btn.del { color: var(--m-pink); } .action-btn.del:hover { background: var(--m-pink); color: white; }
-        
-        /* ================= 清新侧边栏 ================= */
-        #sidebar { 
-            position: absolute; top: 20px; left: 20px; bottom: 20px; width: 360px; 
-            background: var(--sidebar-bg); /* 纯白背景 */
-            border-radius: 24px; /* 大圆角 */
-            box-shadow: var(--shadow-soft); /* 柔和悬浮阴影 */
-            display: flex; flex-direction: column; z-index: 1000; border: 1px solid var(--border-light);
+
+        /* 右侧衍生连线触点 */
+        .derive-handle {
+            position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
+            width: 28px; height: 28px; background: #fff; border: 2px solid var(--m-blue);
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 10;
+            font-size: 12px; color: var(--m-blue); font-weight: bold; transition: 0.2s;
         }
+        .derive-handle:hover { background: var(--m-blue); color: #fff; transform: translateY(-50%) scale(1.1); }
+        
+        /* ================= 侧边栏及其他UI保持马卡龙风格 ================= */
+        #sidebar { position: absolute; top: 20px; left: 20px; bottom: 20px; width: 360px; background: var(--sidebar-bg); border-radius: 24px; box-shadow: var(--shadow-soft); display: flex; flex-direction: column; z-index: 1000; border: 1px solid var(--border-light); }
         .header { padding: 20px; border-bottom: 1px solid var(--border-light); }
         .header h3 { color: var(--text-primary); }
-        .header input { 
-            width: 100%; box-sizing: border-box; padding: 12px; margin-top: 10px; 
-            background: var(--input-bg); /* 浅灰输入框 */
-            border: 1px solid var(--border-light); 
-            color: var(--text-primary); border-radius: 12px; font-size: 13px; outline: none; transition: 0.2s;
-        }
+        .header input { width: 100%; box-sizing: border-box; padding: 12px; margin-top: 10px; background: var(--input-bg); border: 1px solid var(--border-light); color: var(--text-primary); border-radius: 12px; font-size: 13px; outline: none; transition: 0.2s; }
         .header input:focus { border-color: var(--m-blue); background: #fff; }
-        
         .tabs { display: flex; padding: 10px 20px 0; gap: 10px; border-bottom: 1px solid var(--border-light);}
-        .tab-btn { 
-            flex: 1; padding: 10px 0; background: none; border: none; color: var(--text-secondary); font-size: 14px; cursor: pointer; transition: 0.2s; border-radius: 10px 10px 0 0; font-weight: 600;
-            position: relative;
-        }
-        /* 选中的 Tab 下方加一个柔和的彩色条 */
+        .tab-btn { flex: 1; padding: 10px 0; background: none; border: none; color: var(--text-secondary); font-size: 14px; cursor: pointer; transition: 0.2s; border-radius: 10px 10px 0 0; font-weight: 600; position: relative; }
         .tab-btn.active::after { content: ''; position: absolute; bottom: -1px; left: 10%; width: 80%; height: 3px; background: var(--m-blue); border-radius: 3px 3px 0 0;}
         .tab-btn.active { color: var(--m-blue); }
-        
         .workspace { flex-grow: 1; padding: 20px; overflow-y: auto; display: none; flex-direction: column; gap: 15px; }
         .workspace.active { display: flex; }
-        
-        /* ================= 微信风聊天区 (清新版) ================= */
         #chat-window { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; padding: 10px 5px; }
         .msg { display: flex; width: 100%; }
         .msg.user { justify-content: flex-end; }
         .msg.ai { justify-content: flex-start; }
-        .bubble { 
-            max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.5; word-wrap: break-word; user-select: text; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        }
-        /* 用户气泡：马卡龙蓝 */
+        .bubble { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.5; word-wrap: break-word; user-select: text; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
         .msg.user .bubble { background: var(--m-blue); color: white; border-bottom-right-radius: 4px; }
-        /* AI气泡：纯白底+浅灰边框 */
         .msg.ai .bubble { background: #fff; color: var(--text-primary); border-bottom-left-radius: 4px; border: 1px solid var(--border-light); }
-        
         .input-group label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; display: block; font-weight: 600; }
-        .input-group input, .input-group textarea { 
-            width: 100%; box-sizing: border-box; padding: 12px; 
-            background: var(--input-bg); border: 1px solid var(--border-light); color: var(--text-primary); 
-            border-radius: 12px; font-size: 14px; resize: vertical; outline: none; transition: 0.2s;
-        }
+        .input-group input, .input-group textarea { width: 100%; box-sizing: border-box; padding: 12px; background: var(--input-bg); border: 1px solid var(--border-light); color: var(--text-primary); border-radius: 12px; font-size: 14px; resize: vertical; outline: none; transition: 0.2s; }
         .input-group input:focus, .input-group textarea:focus { border-color: var(--m-purple); background: #fff; }
-        
-        /* ================= 马卡龙主按钮 ================= */
-        .run-btn { 
-            padding: 14px; 
-            /* 柔和的蓝紫渐变 */
-            background: linear-gradient(135deg, var(--m-blue), var(--m-purple)); 
-            border: none; border-radius: 14px; color: white; font-weight: bold; font-size: 15px;
-            cursor: pointer; transition: 0.3s; margin-top: 10px; 
-            box-shadow: 0 4px 12px rgba(156, 140, 242, 0.3); /* 柔和的彩色投影 */
-        }
+        .run-btn { padding: 14px; background: linear-gradient(135deg, var(--m-blue), var(--m-purple)); border: none; border-radius: 14px; color: white; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.3s; margin-top: 10px; box-shadow: 0 4px 12px rgba(156, 140, 242, 0.3); }
         .run-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(156, 140, 242, 0.5); }
         .run-btn:active { transform: translateY(0); }
-
-        /* 单独定义图片和视频按钮的渐变，增加趣味性 */
         .run-btn.img-btn { background: linear-gradient(135deg, #4facfe, #00f2fe); box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3); }
         .run-btn.vid-btn { background: linear-gradient(135deg, #a18cd1, #fbc2eb); box-shadow: 0 4px 12px rgba(161, 140, 209, 0.3); }
     </style>
@@ -159,13 +104,27 @@
         <div id="canvas"></div>
     </div>
 
+    <div id="canvas-menu" class="context-menu">
+        <div class="menu-title">添加节点</div>
+        <div class="menu-item" onclick="openPanel('chat')">📝 文本</div>
+        <div class="menu-item" onclick="openPanel('image')">🎨 图片</div>
+        <div class="menu-item" onclick="openPanel('video')">🎬 视频</div>
+        <div class="menu-item" onclick="alert('暂未开放音频模型')">🎵 音频</div>
+    </div>
+
+    <div id="derive-menu" class="context-menu">
+        <div class="menu-title">引用该节点生成</div>
+        <div class="menu-item" onclick="deriveTo('chat')">📝 提取提示词</div>
+        <div class="menu-item" onclick="deriveTo('image')">🎨 图片生图片</div>
+        <div class="menu-item" onclick="deriveTo('video')">🎬 图片生视频</div>
+    </div>
+
     <div id="sidebar">
         <div class="header">
             <h3 style="margin: 0 0 5px 0; font-size: 16px;">🔑 核心引擎配置</h3>
             <input id="apiUrl" type="text" value="https://nexusapi.cn/v1" placeholder="API 接口根地址" />
             <input id="apiKey" type="password" placeholder="填写你的 API Key" />
         </div>
-
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('chat')">💬 剧本推演</button>
             <button class="tab-btn" onclick="switchTab('image')">🎨 画面生成</button>
@@ -173,12 +132,8 @@
         </div>
 
         <div id="tab-chat" class="workspace active">
-            <div class="input-group">
-                <input id="chatModel" type="text" value="gpt-4o" placeholder="模型名称" style="width: 120px; padding: 8px; font-size: 13px;" />
-            </div>
-            <div id="chat-window">
-                <div class="msg ai"><div class="bubble">👋 你好！我是你的灵感助手。今天想创作点什么？</div></div>
-            </div>
+            <div class="input-group"><input id="chatModel" type="text" value="gpt-4o" placeholder="模型名称" style="padding: 8px; font-size: 13px;" /></div>
+            <div id="chat-window"><div class="msg ai"><div class="bubble">👋 可以双击右侧空白画布快速唤出菜单哦！</div></div></div>
             <div class="input-group" style="margin-top: auto;">
                 <textarea id="chatPrompt" rows="3" placeholder="输入对话..."></textarea>
                 <button class="run-btn" onclick="sendChat()">发送消息</button>
@@ -186,54 +141,96 @@
         </div>
 
         <div id="tab-image" class="workspace">
-            <div class="input-group">
-                <label>✨ 选择绘画模型</label>
-                <input id="imgModel" type="text" value="dall-e-3" placeholder="例如: dall-e-3, midjourney" />
-            </div>
-            <div class="input-group">
-                <label>🔗 参考图链接 (可选)</label>
-                <input id="imgRef" type="text" placeholder="粘贴图片 URL" />
-            </div>
-            <div class="input-group">
-                <label>💡 画面提示词 (Prompt)</label>
-                <textarea id="imgPrompt" rows="5" placeholder="描述你想象中的画面..."></textarea>
-            </div>
+            <div class="input-group"><label>✨ 选择绘画模型</label><input id="imgModel" type="text" value="dall-e-3" /></div>
+            <div class="input-group"><label>🔗 参考图链接 (可选)</label><input id="imgRef" type="text" placeholder="粘贴图片 URL" /></div>
+            <div class="input-group"><label>💡 画面提示词 (Prompt)</label><textarea id="imgPrompt" rows="5" placeholder="描述你想象中的画面..."></textarea></div>
             <button class="run-btn img-btn" onclick="generateImage()">🎨 生成便签到画布</button>
         </div>
 
         <div id="tab-video" class="workspace">
-            <div class="input-group">
-                <label>✨ 选择视频模型</label>
-                <input id="vidModel" type="text" value="kling-v1" placeholder="例如: kling-v1, runway" />
-            </div>
-            <div class="input-group">
-                <label>🖼️ 首帧图片 URL</label>
-                <input id="vidRef" type="text" placeholder="由图片便签发送过来..." />
-            </div>
-            <div class="input-group">
-                <label>🎥 动态提示词</label>
-                <textarea id="vidPrompt" rows="4" placeholder="描述镜头和物体的运动方式..."></textarea>
-            </div>
+            <div class="input-group"><label>✨ 选择视频模型</label><input id="vidModel" type="text" value="kling-v1" /></div>
+            <div class="input-group"><label>🖼️ 首帧图片 URL</label><input id="vidRef" type="text" placeholder="由图片便签发送过来..." /></div>
+            <div class="input-group"><label>🎥 动态提示词</label><textarea id="vidPrompt" rows="4" placeholder="描述镜头和物体的运动方式..."></textarea></div>
             <button class="run-btn vid-btn" onclick="mockGenerateVideo()">🎬 生成视频便签</button>
         </div>
     </div>
 
     <script>
-        // ================= UI 切换逻辑 =================
+        // ================= UI 与 上下文菜单逻辑 =================
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.workspace').forEach(ws => ws.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
             document.getElementById('tab-' + tabId).classList.add('active');
         }
 
-        // ================= 画布引擎 (逻辑不变) =================
+        // 隐藏所有弹出菜单
+        function hideMenus() {
+            document.getElementById('canvas-menu').style.display = 'none';
+            document.getElementById('derive-menu').style.display = 'none';
+        }
+
+        // 点击空白处关闭菜单
+        window.addEventListener('mousedown', (e) => {
+            if(!e.target.closest('.context-menu') && !e.target.closest('.derive-handle')) { hideMenus(); }
+        });
+
+        // 目标 1：双击画布呼出添加菜单
+        document.getElementById('viewport').addEventListener('dblclick', (e) => {
+            if(e.target.closest('.node-card')) return; // 点在卡片上不触发
+            const menu = document.getElementById('canvas-menu');
+            menu.style.left = e.clientX + 'px';
+            menu.style.top = e.clientY + 'px';
+            menu.style.display = 'block';
+        });
+
+        // 菜单响应函数
+        window.openPanel = function(type) {
+            hideMenus();
+            switchTab(type);
+        };
+
+        // 目标 2：节点连线/衍生逻辑
+        window.currentDeriveUrl = ""; // 全局记忆当前选中的图片链接
+        
+        window.openDeriveMenu = function(e, url) {
+            e.stopPropagation();
+            const menu = document.getElementById('derive-menu');
+            // 在点击的加号旁边弹出菜单
+            menu.style.left = e.clientX + 15 + 'px';
+            menu.style.top = e.clientY - 20 + 'px';
+            menu.style.display = 'block';
+            window.currentDeriveUrl = url;
+        };
+
+        window.deriveTo = function(targetMode) {
+            hideMenus();
+            const url = window.currentDeriveUrl;
+            if(targetMode === 'video') {
+                switchTab('video');
+                const input = document.getElementById('vidRef');
+                input.value = url;
+                input.style.borderColor = 'var(--m-purple)';
+                setTimeout(() => input.style.borderColor = 'var(--border-light)', 1000);
+            } else if (targetMode === 'image') {
+                switchTab('image');
+                const input = document.getElementById('imgRef');
+                input.value = url;
+                input.style.borderColor = 'var(--m-blue)';
+                setTimeout(() => input.style.borderColor = 'var(--border-light)', 1000);
+            } else {
+                switchTab('chat');
+                document.getElementById('chatPrompt').value = "请帮我反推这张图片的提示词：" + url;
+            }
+        };
+
+        // ================= 画布引擎 =================
         const viewport = document.getElementById('viewport');
         const canvas = document.getElementById('canvas');
         let scale = 1, panX = 0, panY = 0, isPanning = false, startX, startY;
 
         viewport.addEventListener('mousedown', (e) => {
-            if(e.target.closest('.node-card')) return; 
+            if(e.target.closest('.node-card') || e.button !== 0) return; 
             isPanning = true; viewport.style.cursor = 'grabbing';
             startX = e.clientX - panX; startY = e.clientY - panY;
         });
@@ -254,27 +251,32 @@
             canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
         });
 
-        // ================= 高级工作流节点引擎 (适配新UI) =================
+        // ================= 高级工作流节点生成 =================
         function createWorkflowNode(title, contentHtml, typeClass, imgUrl = null) {
             const nodeId = 'node-' + Date.now();
             const node = document.createElement('div');
             node.className = `node-card`;
             node.id = nodeId;
             
-            let actionHtml = `<button class="action-btn del" onclick="document.getElementById('${nodeId}').remove()">🗑️ 删除</button>`;
+            let deriveHtml = '';
             if (imgUrl) {
-                actionHtml += `<button class="action-btn" onclick="sendToVideo('${imgUrl}')">✨ 设为视频首帧</button>`;
-                actionHtml += `<button class="action-btn" onclick="window.open('${imgUrl}')">🔗 原图</button>`;
+                // 生成右侧的“加号”连线按钮，这是即梦/TapNow的灵魂
+                deriveHtml = `<div class="derive-handle" title="衍生生成" onclick="openDeriveMenu(event, '${imgUrl}')">＋</div>`;
             }
 
-            // 注意这里在 node-header 上加了 typeClass
             node.innerHTML = `
                 <div class="node-header ${typeClass}">
                     <span class="node-title">${title}</span>
                     <span style="opacity:0.6; font-size:16px;">⠿</span>
                 </div>
-                <div class="node-body">${contentHtml}</div>
-                <div class="node-actions">${actionHtml}</div>
+                <div class="node-body">
+                    ${contentHtml}
+                    ${deriveHtml}
+                </div>
+                <div class="node-actions">
+                    <button class="action-btn del" onclick="document.getElementById('${nodeId}').remove()">🗑️ 删除</button>
+                    ${imgUrl ? `<button class="action-btn" onclick="window.open('${imgUrl}')">🔗 查看原图</button>` : ''}
+                </div>
             `;
             
             const centerX = (-panX + (window.innerWidth - 360) / 2) / scale - 150;
@@ -290,44 +292,25 @@
                 nInitX = parseFloat(node.style.left); nInitY = parseFloat(node.style.top);
                 document.querySelectorAll('.node-card').forEach(n => n.style.zIndex = '1');
                 node.style.zIndex = '10';
-                node.style.transform = 'scale(1.02)'; // 拖拽时轻微放大
             });
             window.addEventListener('mousemove', (e) => {
                 if(!isDragging) return;
                 node.style.left = `${nInitX + (e.clientX - nStartX) / scale}px`;
                 node.style.top = `${nInitY + (e.clientY - nStartY) / scale}px`;
             });
-            window.addEventListener('mouseup', () => {
-                 isDragging = false;
-                 node.style.transform = 'scale(1)'; // 恢复原状
-            });
+            window.addEventListener('mouseup', () => isDragging = false);
 
             canvas.appendChild(node);
         }
 
-        // ================= 业务逻辑 (逻辑不变) =================
+        // ================= 业务逻辑 =================
         let chatHistory = [];
-
         function appendMessage(role, text) {
             const win = document.getElementById('chat-window');
             win.innerHTML += `<div class="msg ${role}"><div class="bubble">${text.replace(/\n/g, '<br>')}</div></div>`;
             win.scrollTop = win.scrollHeight;
         }
 
-        window.sendToVideo = function(url) {
-            switchTab('video');
-            const input = document.getElementById('vidRef');
-            input.value = url;
-            // 聚焦动画
-            input.style.borderColor = 'var(--m-purple)';
-            input.style.background = '#fff';
-            setTimeout(() => {
-                input.style.borderColor = 'var(--border-light)';
-                input.style.background = 'var(--input-bg)';
-            }, 1000);
-        };
-
-        // 1. 聊天逻辑
         window.sendChat = async function() {
             const url = document.getElementById('apiUrl').value.replace(/\/$/, '');
             const key = document.getElementById('apiKey').value;
@@ -356,7 +339,6 @@
             finally { btn.innerText = oldText; btn.style.opacity = "1"; }
         };
 
-        // 2. 生图逻辑
         window.generateImage = async function() {
             const url = document.getElementById('apiUrl').value.replace(/\/$/, '');
             const key = document.getElementById('apiKey').value;
@@ -379,7 +361,6 @@
                 
                 if(data.data && data.data[0].url) {
                     const imgUrl = data.data[0].url;
-                    // 注意这里传入了 'img-node' 类型
                     createWorkflowNode(
                         `🎨 生图结果 (${model})`, 
                         `<div style="margin-bottom:5px;color:var(--text-secondary);">Prompt: ${prompt.substring(0, 15)}...</div><img src="${imgUrl}" draggable="false" />`, 
@@ -387,17 +368,14 @@
                         imgUrl
                     );
                 } else { throw new Error(JSON.stringify(data)); }
-            } catch(e) { 
-                alert("生成失败 (请检查模型名称是否正确):\n" + e.message); 
-            } finally { btn.innerText = oldText; btn.style.opacity = "1"; }
+            } catch(e) { alert("生成失败:\n" + e.message); } 
+            finally { btn.innerText = oldText; btn.style.opacity = "1"; }
         };
 
-        // 3. 视频逻辑 (演示)
         window.mockGenerateVideo = function() {
              const btn = event.target; const oldText = btn.innerText;
              btn.innerText = "🎬 正在渲染..."; btn.style.opacity = "0.8";
              setTimeout(() => {
-                // 注意这里传入了 'vid-node' 类型
                 createWorkflowNode(
                     `🎬 视频 (演示节点)`, 
                     `<div>运镜: 缓慢推进...</div><video src="https://www.w3schools.com/html/mov_bbb.mp4" controls autoplay loop muted></video>`, 
