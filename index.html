@@ -3,318 +3,446 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI 漫剧 API 工作站 - 真实连线版</title>
+    <title>AI 漫剧工作站 - 专业节点引擎版</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* 马卡龙配色系统 */
         :root {
-            --bg-color: #f9fbfd; --grid-color: #e8ebed; 
-            --text-primary: #2c3e50; --text-secondary: #546e7a; 
-            --m-purple: #9c8cf2; --m-blue: #64b5f6; --m-pink: #ff80ab;
+            --bg: #f8fafc; --grid: #e2e8f0; --primary: #3b82f6; --primary-hover: #2563eb;
+            --node-bg: #ffffff; --border: #cbd5e1; --text-main: #334155; --text-sub: #64748b;
+            --port-in: #10b981; --port-out: #3b82f6; --wire: #94a3b8;
         }
 
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-primary); user-select: none; }
+        body { margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text-main); user-select: none; }
         
-        /* 无限画布与 SVG 连线层 */
-        #viewport { position: absolute; left: 320px; right: 0; top: 0; bottom: 0; overflow: hidden; cursor: grab; background-color: var(--bg-color); background-image: linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px); background-size: 25px 25px; }
+        /* 1. 画布与网格体系 */
+        #viewport { position: absolute; left: 60px; right: 0; top: 0; bottom: 0; overflow: hidden; cursor: grab; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, var(--grid) 1px, transparent 0); background-size: 20px 20px; }
         #canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
-        #svg-wires { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; z-index: 0; pointer-events: none; }
-        .wire { fill: none; stroke: #b0bec5; stroke-width: 4; stroke-dasharray: 8 4; animation: flow 1s linear infinite; }
-        .wire.active { stroke: var(--m-blue); stroke-dasharray: none; animation: none; }
-        @keyframes flow { to { stroke-dashoffset: -12; } }
-
-        /* 真实端口节点系统 */
-        .node-card { position: absolute; background: #fff; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); width: 280px; z-index: 1; border: 1px solid #eee; }
-        .node-header { padding: 12px 15px; border-radius: 16px 16px 0 0; font-weight: bold; cursor: move; display: flex; justify-content: space-between; align-items: center; color: #fff; }
-        .node-header.img-node { background: var(--m-blue); }
-        .node-header.vid-node { background: var(--m-purple); }
         
-        .node-body { padding: 15px; display: flex; flex-direction: column; gap: 10px; position: relative; }
-        .node-body input, .node-body textarea { padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; outline: none; }
-        .node-body img { width: 100%; border-radius: 8px; margin-top: 5px; display: none; }
+        /* 真实的 SVG 连线层 */
+        #svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
+        .wire { fill: none; stroke: var(--wire); stroke-width: 2.5; transition: stroke 0.2s; stroke-linecap: round; }
+        .wire.active { stroke: var(--primary); stroke-width: 3; }
+        .wire.temp { stroke-dasharray: 6 6; animation: dash 1s linear infinite; }
+        @keyframes dash { to { stroke-dashoffset: -12; } }
+
+        /* 2. 左侧图标工具栏 (对标截图) */
+        #toolbar { position: absolute; left: 15px; top: 20px; bottom: 20px; width: 50px; background: #fff; border-radius: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 15px 0; z-index: 100; gap: 15px; overflow-y: auto;}
+        .tool-btn { width: 36px; height: 36px; border-radius: 12px; border: none; background: transparent; color: var(--text-sub); font-size: 16px; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+        .tool-btn:hover { background: #f1f5f9; color: var(--primary); }
+        .tool-btn.active { background: var(--primary); color: white; border-radius: 18px; }
+
+        /* 3. 底部命令条 */
+        #bottom-bar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #fff; border-radius: 20px; padding: 10px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border); display: flex; align-items: center; gap: 10px; z-index: 100; font-size: 13px; color: var(--text-sub); }
+        #api-settings { display: flex; gap: 10px; align-items: center; }
+        .api-input { border: 1px solid #ddd; padding: 6px 10px; border-radius: 6px; outline: none; font-size: 12px; width: 150px; }
+
+        /* 4. 节点结构设计 (完全还原截图) */
+        #nodes-container { position: absolute; top: 0; left: 0; z-index: 1; }
+        .node { position: absolute; background: var(--node-bg); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.03); width: 280px; display: flex; flex-direction: column; transition: box-shadow 0.2s; }
+        .node:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+        .node.selected { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); z-index: 10; }
         
-        /* 物理端口 (输入/输出) */
-        .port { position: absolute; width: 14px; height: 14px; background: #fff; border: 3px solid #ccc; border-radius: 50%; cursor: crosshair; z-index: 10; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .port:hover { transform: scale(1.3); }
-        .port.out { right: -10px; top: 50%; border-color: var(--m-blue); }
-        .port.in { left: -10px; top: 50%; border-color: var(--m-purple); }
+        .node-header { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; cursor: move; font-size: 13px; font-weight: 600; color: var(--text-main); }
+        .node-header-actions i { color: #94a3b8; cursor: pointer; margin-left: 8px; transition: 0.2s; }
+        .node-header-actions i:hover { color: #ef4444; }
 
-        .run-btn { padding: 10px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; background: #333; transition: 0.2s; }
-        .run-btn:hover { opacity: 0.9; }
-        .run-btn.img { background: var(--m-blue); }
-        .run-btn.vid { background: var(--m-purple); }
+        .node-content { padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group label { font-size: 12px; color: var(--text-sub); }
+        .input-group input, .input-group select, .input-group textarea { padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; outline: none; background: #fafafa; transition: 0.2s; font-family: inherit;}
+        .input-group input:focus, .input-group select:focus, .input-group textarea:focus { border-color: var(--primary); background: #fff; }
+        
+        .run-btn { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 6px;}
+        .run-btn:hover { background: var(--primary-hover); }
+        .run-btn:disabled { background: #94a3b8; cursor: not-allowed; }
 
-        /* 极简侧边栏：专注 API 核心配置 */
-        #sidebar { position: absolute; top: 0; left: 0; bottom: 0; width: 320px; background: #fff; border-right: 1px solid #eee; display: flex; flex-direction: column; z-index: 1000; box-shadow: 5px 0 15px rgba(0,0,0,0.05); }
-        .panel-section { padding: 20px; border-bottom: 1px solid #eee; }
-        .panel-section h3 { margin: 0 0 15px 0; font-size: 15px; color: var(--text-primary); }
-        .panel-section input { width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; }
-        .add-btn { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px dashed #ccc; background: #fafafa; border-radius: 8px; color: var(--text-secondary); cursor: pointer; font-weight: bold; }
-        .add-btn:hover { border-color: var(--m-blue); color: var(--m-blue); background: #f0f8ff; }
+        .node-result { border-radius: 8px; overflow: hidden; display: none; margin-top: 5px; border: 1px solid var(--border);}
+        .node-result img { width: 100%; display: block; }
+        .node-result p { padding: 10px; margin: 0; font-size: 12px; word-wrap: break-word; }
+
+        /* 5. 真实的物理端口 (核心重点) */
+        .port-container { position: absolute; display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; cursor: crosshair; }
+        .port { width: 8px; height: 8px; border-radius: 50%; background: #fff; border: 2px solid; transition: 0.2s; pointer-events: none; }
+        .port-container:hover .port { transform: scale(1.5); }
+        
+        /* 输入端口在左，输出端口在右 */
+        .port-in { left: -10px; }
+        .port-in .port { border-color: var(--port-in); }
+        .port-out { right: -10px; }
+        .port-out .port { border-color: var(--port-out); }
+        
+        /* 专门给属性对应的端口定位 */
+        .port-t2i-prompt { top: 220px; } /* 对应提示词输入框的高度 */
+        .port-t2i-out { top: 50%; }
+        
+        .port-txt-out { top: 50%; }
     </style>
 </head>
 <body>
 
-    <div id="sidebar">
-        <div class="panel-section">
-            <h3>⚙️ 全局 API 引擎配置</h3>
-            <input id="apiUrl" type="text" value="https://nexusapi.cn/v1" placeholder="API 根地址" />
-            <input id="apiKey" type="password" placeholder="API Key (必填)" />
-        </div>
-        <div class="panel-section">
-            <h3>➕ 拖拽/点击添加节点</h3>
-            <button class="add-btn" onclick="spawnNode('image')">🎨 添加 [API 生图] 节点</button>
-            <button class="add-btn" onclick="spawnNode('video')">🎬 添加 [API 视频] 节点</button>
-            <p style="font-size:12px; color:#999; line-height:1.6; margin-top:15px;">
-                <b>工作流指南：</b><br>
-                1. 鼠标按住节点右侧的蓝点（输出端口），拖拽连线到另一个节点的左侧紫点（输入端口）。<br>
-                2. 连线后，生图节点的图片 URL 会自动传输给视频节点。
-            </p>
+    <div id="toolbar">
+        <button class="tool-btn" onclick="viewport.style.cursor='grab'" title="拖拽画布"><i class="fas fa-hand"></i></button>
+        <div style="width:20px; height:1px; background:var(--border);"></div>
+        <button class="tool-btn active" onclick="addNode('text')" title="添加文本节点"><i class="fas fa-font"></i></button>
+        <button class="tool-btn" onclick="addNode('t2i')" title="添加文生图节点"><i class="fas fa-image"></i></button>
+        <button class="tool-btn" onclick="addNode('i2i')" title="添加图生图节点"><i class="fas fa-images"></i></button>
+        <button class="tool-btn" onclick="alert('视频生成功能即将接入')" title="添加视频节点"><i class="fas fa-video"></i></button>
+        <div style="width:20px; height:1px; background:var(--border);"></div>
+        <button class="tool-btn" onclick="clearCanvas()" title="清空画布"><i class="fas fa-trash-alt"></i></button>
+    </div>
+
+    <div id="bottom-bar">
+        <i class="far fa-comment-dots"></i> nexus API 配置:
+        <div id="api-settings">
+            <input type="text" id="global-url" class="api-input" value="https://nexusapi.cn/v1" placeholder="API 地址" />
+            <input type="password" id="global-key" class="api-input" placeholder="输入 API Key" />
         </div>
     </div>
 
     <div id="viewport">
         <div id="canvas">
-            <svg id="svg-wires"></svg>
+            <svg id="svg-layer"></svg>
             <div id="nodes-container"></div>
         </div>
     </div>
 
     <script>
-        // ================= 1. 画布漫游引擎 =================
+        // ==========================================
+        // 核心引擎 1：画布漫游与缩放系统
+        // ==========================================
         const viewport = document.getElementById('viewport');
         const canvas = document.getElementById('canvas');
         let scale = 1, panX = 0, panY = 0, isPanning = false, startX, startY;
 
         viewport.addEventListener('mousedown', (e) => {
-            if(e.target.closest('.node-card') || e.target.closest('.port')) return; 
-            isPanning = true; viewport.style.cursor = 'grabbing';
-            startX = e.clientX - panX; startY = e.clientY - panY;
+            if(e.target.closest('.node') || e.target.closest('.port-container')) return; 
+            if(e.button === 0) { // 左键拖拽
+                isPanning = true; viewport.style.cursor = 'grabbing';
+                startX = e.clientX - panX; startY = e.clientY - panY;
+            }
         });
         window.addEventListener('mousemove', (e) => {
             if (!isPanning) return;
             panX = e.clientX - startX; panY = e.clientY - startY;
-            updateCanvasTransform();
+            updateCanvas();
         });
         window.addEventListener('mouseup', () => { isPanning = false; viewport.style.cursor = 'grab'; });
         viewport.addEventListener('wheel', (e) => {
             e.preventDefault();
-            const newScale = Math.min(Math.max(0.2, scale + (e.deltaY * -0.001)), 3);
-            const mouseX = e.clientX - panX - 320; 
+            const newScale = Math.min(Math.max(0.2, scale + (e.deltaY * -0.001)), 2);
+            const mouseX = e.clientX - panX - 60; // 减去左侧工具栏宽度
             const mouseY = e.clientY - panY;
-            panX -= mouseX * (newScale / scale - 1); panY -= mouseY * (newScale / scale - 1);
-            scale = newScale; updateCanvasTransform();
-        });
+            panX -= mouseX * (newScale / scale - 1);
+            panY -= mouseY * (newScale / scale - 1);
+            scale = newScale; updateCanvas();
+            updateAllWires(); // 缩放时重绘连线
+        }, { passive: false });
 
-        function updateCanvasTransform() {
-            canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-        }
+        function updateCanvas() { canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
 
-        // ================= 2. 真实物理连线引擎 (核心科技) =================
-        let wires = []; // 存放真实的连线关系: {fromNode, toNode, fromPort, toPort, pathElement}
+        // ==========================================
+        // 核心引擎 2：物理连线系统 (SVG 贝塞尔曲线)
+        // ==========================================
+        const svgLayer = document.getElementById('svg-layer');
+        let connections = []; // 存储真实的连线关系 { fromNode, toNode, fromPortId, toPortId, pathEl }
         let isWiring = false;
         let tempWire = null;
-        let wiringStartPort = null;
+        let startPort = null;
 
-        const svgWires = document.getElementById('svg-wires');
-
-        // 绘制贝塞尔曲线公式
-        function drawBezier(x1, y1, x2, y2) {
-            const offset = Math.abs(x2 - x1) * 0.5 + 50;
-            return `M ${x1} ${y1} C ${x1 + offset} ${y1}, ${x2 - offset} ${y2}, ${x2} ${y2}`;
+        // 计算贝塞尔曲线 D 属性
+        function createBezier(x1, y1, x2, y2) {
+            const dx = Math.abs(x2 - x1) * 0.5 + 40;
+            return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
         }
 
-        // 获取端口在画布上的绝对坐标
-        function getPortCenter(portEl) {
-            const node = portEl.closest('.node-card');
-            const rect = portEl.getBoundingClientRect();
+        // 获取端口在 Canvas 内的精确绝对坐标
+        function getPortCoords(portContainer) {
+            const rect = portContainer.getBoundingClientRect();
             const canvasRect = canvas.getBoundingClientRect();
-            // 抵消 scale 的影响，计算出真实的 x, y
             return {
-                x: (rect.left + rect.width/2 - canvasRect.left) / scale,
-                y: (rect.top + rect.height/2 - canvasRect.top) / scale
+                x: (rect.left + rect.width / 2 - canvasRect.left) / scale,
+                y: (rect.top + rect.height / 2 - canvasRect.top) / scale
             };
         }
 
-        // 全局重绘所有连线
-        function renderWires() {
-            wires.forEach(wire => {
-                const p1 = getPortCenter(wire.fromPort);
-                const p2 = getPortCenter(wire.toPort);
-                wire.pathElement.setAttribute('d', drawBezier(p1.x, p1.y, p2.x, p2.y));
+        function updateAllWires() {
+            connections.forEach(conn => {
+                const p1 = getPortCoords(conn.fromPort);
+                const p2 = getPortCoords(conn.toPort);
+                conn.pathEl.setAttribute('d', createBezier(p1.x, p1.y, p2.x, p2.y));
             });
         }
 
-        // 拖拽连线逻辑
+        // 连线交互逻辑
         window.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('port') && e.target.classList.contains('out')) {
-                isWiring = true;
-                wiringStartPort = e.target;
-                tempWire = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                tempWire.setAttribute('class', 'wire');
-                svgWires.appendChild(tempWire);
+            const port = e.target.closest('.port-container');
+            if (port && port.classList.contains('port-out')) {
+                isWiring = true; startPort = port;
+                tempWire = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                tempWire.setAttribute('class', 'wire temp');
+                svgLayer.appendChild(tempWire);
+                e.stopPropagation();
             }
         });
 
         window.addEventListener('mousemove', (e) => {
             if (isWiring && tempWire) {
-                const p1 = getPortCenter(wiringStartPort);
+                const p1 = getPortCoords(startPort);
                 const canvasRect = canvas.getBoundingClientRect();
                 const mouseX = (e.clientX - canvasRect.left) / scale;
                 const mouseY = (e.clientY - canvasRect.top) / scale;
-                tempWire.setAttribute('d', drawBezier(p1.x, p1.y, mouseX, mouseY));
+                tempWire.setAttribute('d', createBezier(p1.x, p1.y, mouseX, mouseY));
             }
         });
 
         window.addEventListener('mouseup', (e) => {
             if (isWiring) {
-                if (e.target.classList.contains('port') && e.target.classList.contains('in')) {
-                    // 连线成功！建立真实数据通道
-                    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    path.setAttribute('class', 'wire active');
-                    svgWires.appendChild(path);
-                    wires.push({
-                        fromNode: wiringStartPort.closest('.node-card').id,
-                        toNode: e.target.closest('.node-card').id,
-                        fromPort: wiringStartPort,
-                        toPort: e.target,
-                        pathElement: path
+                const endPort = e.target.closest('.port-in');
+                if (endPort && endPort.closest('.node').id !== startPort.closest('.node').id) {
+                    // 建立物理连接！
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('class', 'wire');
+                    svgLayer.appendChild(path);
+                    
+                    connections.push({
+                        fromNode: startPort.closest('.node').id,
+                        toNode: endPort.closest('.node').id,
+                        fromPort: startPort,
+                        toPort: endPort,
+                        pathEl: path,
+                        // 标记端口类型用于数据传递
+                        toInputType: endPort.dataset.inputType 
                     });
-                    renderWires();
+                    updateAllWires();
                 }
-                // 清理临时线
-                if(tempWire) { tempWire.remove(); tempWire = null; }
-                isWiring = false; wiringStartPort = null;
+                if (tempWire) tempWire.remove();
+                isWiring = false; startPort = null;
             }
         });
 
-        // ================= 3. 节点生成与通信逻辑 =================
-        let nodeCounter = 0;
+        // ==========================================
+        // 核心引擎 3：节点工厂 (生成不同的 UI 节点)
+        // ==========================================
+        const nodesContainer = document.getElementById('nodes-container');
+        let nodeIndex = 0;
         
-        window.spawnNode = function(type) {
-            nodeCounter++;
-            const nodeId = 'node-' + nodeCounter;
+        // 全局工作流数据池：记录每个节点产生的最终输出数据
+        const workflowData = {};
+
+        function addNode(type) {
+            nodeIndex++;
+            const nodeId = `node_${nodeIndex}`;
             const node = document.createElement('div');
-            node.className = `node-card`; node.id = nodeId;
+            node.className = 'node';
+            node.id = nodeId;
             
-            let html = '';
-            if (type === 'image') {
-                html = `
-                    <div class="node-header img-node"><span>🎨 API 生图节点</span><span style="font-size:12px;opacity:0.8;">ID:${nodeCounter}</span></div>
-                    <div class="node-body">
-                        <input id="model-${nodeId}" type="text" value="dall-e-3" placeholder="模型名" />
-                        <textarea id="prompt-${nodeId}" rows="3" placeholder="画面提示词..."></textarea>
-                        <button class="run-btn img" onclick="runAPI('${nodeId}', 'image')">执行 API 请求</button>
-                        <img id="img-${nodeId}" />
-                        <div class="port out" title="输出图片数据"></div>
-                    </div>`;
-            } else if (type === 'video') {
-                html = `
-                    <div class="node-header vid-node"><span>🎬 API 视频节点</span><span style="font-size:12px;opacity:0.8;">ID:${nodeCounter}</span></div>
-                    <div class="node-body">
-                        <div class="port in" title="接收图片数据"></div>
-                        <input id="model-${nodeId}" type="text" value="kling-v1" placeholder="模型名" />
-                        <input id="refUrl-${nodeId}" type="text" placeholder="首帧图 URL (等待连线输入或手动填)" />
-                        <textarea id="prompt-${nodeId}" rows="2" placeholder="动态提示词..."></textarea>
-                        <button class="run-btn vid" onclick="runAPI('${nodeId}', 'video')">执行 API 请求</button>
-                    </div>`;
+            // 出生坐标 (考虑屏幕偏移)
+            const spawnX = (-panX + 200 + (nodeIndex * 30)) / scale;
+            const spawnY = (-panY + 100 + (nodeIndex * 30)) / scale;
+            node.style.left = `${spawnX}px`;
+            node.style.top = `${spawnY}px`;
+
+            let innerHTML = '';
+
+            // --- 文本节点 ---
+            if (type === 'text') {
+                innerHTML = `
+                    <div class="node-header">
+                        <span>📝 文本</span>
+                        <div class="node-header-actions"><i class="fas fa-trash" onclick="deleteNode('${nodeId}')"></i></div>
+                    </div>
+                    <div class="node-content">
+                        <textarea id="val_${nodeId}" rows="6" placeholder="输入提示词、设定或任意文本..."></textarea>
+                    </div>
+                    <div class="port-container port-out port-txt-out" title="输出文本内容">
+                        <div class="port"></div>
+                    </div>
+                `;
+            } 
+            // --- 文生图节点 ---
+            else if (type === 't2i') {
+                innerHTML = `
+                    <div class="node-header img-node">
+                        <span>🎨 文生图</span>
+                        <div class="node-header-actions"><i class="fas fa-trash" onclick="deleteNode('${nodeId}')"></i></div>
+                    </div>
+                    <div class="node-content">
+                        <div class="input-group">
+                            <label>模型</label>
+                            <input id="model_${nodeId}" type="text" value="dall-e-3" />
+                        </div>
+                        <div class="input-group">
+                            <label>分辨率</label>
+                            <select id="size_${nodeId}"><option value="1024x1024">1024x1024</option></select>
+                        </div>
+                        <div class="input-group">
+                            <label>画面提示词</label>
+                            <textarea id="val_${nodeId}" rows="3" placeholder="描述画面或连接左侧文本节点..."></textarea>
+                        </div>
+                        <button class="run-btn" id="btn_${nodeId}" onclick="runAPI('${nodeId}', 't2i')"><i class="fas fa-magic"></i> 立即生成</button>
+                        <div class="node-result" id="res_${nodeId}"><img id="img_${nodeId}" /></div>
+                    </div>
+                    
+                    <div class="port-container port-in port-t2i-prompt" data-input-type="prompt" title="接收提示词">
+                        <div class="port"></div>
+                    </div>
+                    <div class="port-container port-out port-t2i-out" title="输出图片链接">
+                        <div class="port"></div>
+                    </div>
+                `;
             }
-            node.innerHTML = html;
+            // --- 图生图节点 (占位) ---
+            else if (type === 'i2i') {
+                innerHTML = `
+                    <div class="node-header img-node"><span>🖼️ 图生图</span><div class="node-header-actions"><i class="fas fa-trash" onclick="deleteNode('${nodeId}')"></i></div></div>
+                    <div class="node-content">
+                        <div class="input-group"><label>参考图 URL</label><input id="ref_${nodeId}" type="text" placeholder="连接左侧图片或填入URL" /></div>
+                        <div class="input-group"><label>修改提示词</label><textarea id="val_${nodeId}" rows="2"></textarea></div>
+                        <button class="run-btn" onclick="alert('图生图API取决于你用的模型，逻辑与文生图类似。')">立即生成</button>
+                    </div>
+                    <div class="port-container port-in" style="top:60px;" data-input-type="refImage"><div class="port"></div></div>
+                    <div class="port-container port-out port-t2i-out"><div class="port"></div></div>
+                `;
+            }
+
+            node.innerHTML = innerHTML;
             
-            // 出生在画面正中间
-            node.style.left = `${(-panX + 200) / scale}px`;
-            node.style.top = `${(-panY + 200) / scale}px`;
-            
-            // 节点拖拽逻辑 (同时更新连线)
+            // 节点选中与拖拽逻辑
             const header = node.querySelector('.node-header');
-            let isDragging = false, nStartX, nStartY, nInitX, nInitY;
+            let isDraggingNode = false, nx, ny, ix, iy;
             header.addEventListener('mousedown', (e) => {
-                isDragging = true; nStartX = e.clientX; nStartY = e.clientY;
-                nInitX = parseFloat(node.style.left); nInitY = parseFloat(node.style.top);
-                document.querySelectorAll('.node-card').forEach(n => n.style.zIndex = '1'); node.style.zIndex = '10';
+                document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+                node.classList.add('selected');
+                isDraggingNode = true; nx = e.clientX; ny = e.clientY;
+                ix = parseFloat(node.style.left); iy = parseFloat(node.style.top);
+                e.stopPropagation();
             });
             window.addEventListener('mousemove', (e) => {
-                if(!isDragging) return;
-                node.style.left = `${nInitX + (e.clientX - nStartX) / scale}px`;
-                node.style.top = `${nInitY + (e.clientY - nStartY) / scale}px`;
-                renderWires(); // 拖动节点时，连线跟着动！
+                if(isDraggingNode) {
+                    node.style.left = `${ix + (e.clientX - nx) / scale}px`;
+                    node.style.top = `${iy + (e.clientY - ny) / scale}px`;
+                    updateAllWires(); // 拖拽节点时实时更新线段
+                }
             });
-            window.addEventListener('mouseup', () => isDragging = false);
+            window.addEventListener('mouseup', () => isDraggingNode = false);
 
-            document.getElementById('nodes-container').appendChild(node);
-        };
-
-        // ================= 4. API 调度与数据传递核心 =================
-        // 全局节点数据存储池 (模拟真实的工作流内存)
-        window.nodeDataStore = {};
-
-        window.runAPI = async function(nodeId, type) {
-            const url = document.getElementById('apiUrl').value.replace(/\/$/, '');
-            const key = document.getElementById('apiKey').value;
-            const model = document.getElementById(`model-${nodeId}`).value;
-            const prompt = document.getElementById(`prompt-${nodeId}`).value;
+            nodesContainer.appendChild(node);
             
-            if(!url || !key || !prompt) { alert("API配置或提示词为空！"); return; }
-            const btn = document.querySelector(`#${nodeId} .run-btn`);
-            const oldText = btn.innerText;
-            btn.innerText = "⏳ 正在请求 API..."; btn.disabled = true;
+            // 如果是文本节点，实时将文本内容写入全局数据池
+            if (type === 'text') {
+                const txtArea = document.getElementById(`val_${nodeId}`);
+                txtArea.addEventListener('input', () => {
+                    workflowData[nodeId] = { type: 'text', value: txtArea.value };
+                    flowDataDownstream(nodeId); // 自动向下游流转
+                });
+            }
+        }
+
+        // 删除节点及相关连线
+        window.deleteNode = function(nodeId) {
+            document.getElementById(nodeId).remove();
+            // 找出与该节点相关的连线并删除
+            const linesToRemove = connections.filter(c => c.fromNode === nodeId || c.toNode === nodeId);
+            linesToRemove.forEach(l => l.pathEl.remove());
+            connections = connections.filter(c => c.fromNode !== nodeId && c.toNode !== nodeId);
+            delete workflowData[nodeId];
+        }
+        
+        window.clearCanvas = function() {
+            nodesContainer.innerHTML = ''; svgLayer.innerHTML = '';
+            connections = []; Object.keys(workflowData).forEach(k => delete workflowData[k]);
+        }
+
+        // ==========================================
+        // 核心引擎 4：工作流数据传递与 API 调度
+        // ==========================================
+
+        // 根据物理连线，将上游的数据自动填入下游的输入框
+        function flowDataDownstream(sourceNodeId) {
+            const outData = workflowData[sourceNodeId];
+            if (!outData) return;
+
+            connections.forEach(conn => {
+                if (conn.fromNode === sourceNodeId) {
+                    const targetNodeId = conn.toNode;
+                    const inputType = conn.toInputType;
+                    
+                    if (outData.type === 'text' && inputType === 'prompt') {
+                        // 将文本节点的文字，传递给下游节点的提示词框
+                        const targetInput = document.getElementById(`val_${targetNodeId}`);
+                        if (targetInput) {
+                            targetInput.value = outData.value;
+                            // 添加闪烁特效表示接收到数据
+                            targetInput.style.backgroundColor = '#e0f2fe';
+                            setTimeout(() => targetInput.style.backgroundColor = '#fafafa', 500);
+                        }
+                    } 
+                    else if (outData.type === 'image' && inputType === 'refImage') {
+                        // 将生图节点的图片URL，传递给图生图的参考图框
+                        const targetInput = document.getElementById(`ref_${targetNodeId}`);
+                        if (targetInput) targetInput.value = outData.value;
+                    }
+                }
+            });
+        }
+
+        // 执行 API (这里演示真正的 API 调用)
+        window.runAPI = async function(nodeId, type) {
+            const url = document.getElementById('global-url').value.replace(/\/$/, '');
+            const key = document.getElementById('global-key').value;
+            
+            if(!url || !key) { alert("⚠️ 请在底部填写 API 根地址和 Key！"); return; }
+
+            const btn = document.getElementById(`btn_${nodeId}`);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 处理中...`;
+            btn.disabled = true;
 
             try {
-                if (type === 'image') {
-                    // 发起真实的画图 API 请求
+                if (type === 't2i') {
+                    const model = document.getElementById(`model_${nodeId}`).value;
+                    const prompt = document.getElementById(`val_${nodeId}`).value;
+                    const size = document.getElementById(`size_${nodeId}`).value;
+
+                    if(!prompt) throw new Error("提示词不能为空！");
+
+                    // 真实请求 OpenAI 标准画图接口
                     const res = await fetch(`${url}/images/generations`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-                        body: JSON.stringify({ model: model, prompt: prompt, n: 1, size: "1024x1024" })
+                        body: JSON.stringify({ model: model, prompt: prompt, n: 1, size: size })
                     });
                     const data = await res.json();
                     
                     if(data.data && data.data[0].url) {
                         const imgUrl = data.data[0].url;
                         
-                        // 1. 在节点内展示
-                        const imgEl = document.getElementById(`img-${nodeId}`);
-                        imgEl.src = imgUrl; imgEl.style.display = 'block';
+                        // 1. 在节点内渲染图片
+                        const resDiv = document.getElementById(`res_${nodeId}`);
+                        const imgEl = document.getElementById(`img_${nodeId}`);
+                        imgEl.src = imgUrl; resDiv.style.display = 'block';
                         
-                        // 2. 将数据写入内存池
-                        window.nodeDataStore[nodeId] = { imageUrl: imgUrl };
+                        // 2. 将产出写入全局工作流内存
+                        workflowData[nodeId] = { type: 'image', value: imgUrl };
                         
-                        // 3. 【核心联动】顺着物理连线，把数据传给下游节点！
-                        passDataThroughWires(nodeId);
+                        // 3. 通知连线的下游节点接收数据
+                        flowDataDownstream(nodeId);
 
                     } else { throw new Error(JSON.stringify(data)); }
-                } 
-                else if (type === 'video') {
-                    // 真实的视频 API 调用通常需要专门的 JSON 结构，这里做演示保护
-                    const refUrl = document.getElementById(`refUrl-${nodeId}`).value;
-                    alert(`✅ 视频 API 请求模拟成功！\n发送的数据包:\n模型: ${model}\n首帧图: ${refUrl}\n提示词: ${prompt}`);
                 }
             } catch(e) { 
-                alert("API 请求失败:\n" + e.message); 
+                alert("节点运行失败:\n" + e.message); 
             } finally { 
-                btn.innerText = oldText; btn.disabled = false; 
+                btn.innerHTML = originalText; btn.disabled = false; 
             }
         };
 
-        // 数据流转函数：把当前节点的产出，传递给所有连接了它的节点
-        function passDataThroughWires(sourceNodeId) {
-            const outData = window.nodeDataStore[sourceNodeId];
-            if(!outData) return;
+        // 默认初始化添加两个节点方便演示
+        setTimeout(() => {
+            addNode('text');
+            setTimeout(() => addNode('t2i'), 100);
+        }, 300);
 
-            // 寻找所有从该节点出发的连线
-            wires.forEach(wire => {
-                if(wire.fromNode === sourceNodeId) {
-                    const targetNodeId = wire.toNode;
-                    // 将源节点的图片 URL，写入目标节点的 refUrl 输入框里
-                    const targetInput = document.getElementById(`refUrl-${targetNodeId}`);
-                    if(targetInput) {
-                        targetInput.value = outData.imageUrl;
-                        // 加点视觉特效，告诉用户数据传过来了
-                        targetInput.style.background = '#e3f2fd';
-                        setTimeout(() => targetInput.style.background = 'white', 1000);
-                    }
-                }
-            });
-        }
     </script>
 </body>
 </html>
