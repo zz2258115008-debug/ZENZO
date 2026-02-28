@@ -1,99 +1,167 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>我的全能 API 画布</title>
+    <title>AI 全能节点画布 - 对标 TapNow</title>
     <link rel="stylesheet" href="https://unpkg.com/tldraw@latest/tldraw.css" />
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; height: 100vh; width: 100vw; font-family: sans-serif; background: #f8f9fa; }
+        body { margin: 0; padding: 0; overflow: hidden; height: 100vh; width: 100vw; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; }
         #my-canvas { position: fixed; inset: 0; z-index: 1; }
         
-        /* 自定义控制面板样式 */
-        #api-panel {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 999; background: white; padding: 15px 20px;
-            border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-            display: flex; gap: 10px; align-items: center; border: 1px solid #e5e7eb;
-        }
-        input, select { 
-            padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; 
-            outline: none; font-size: 14px;
-        }
-        input:focus { border-color: #0070f3; }
-        button { 
-            cursor: pointer; border: none; background: #171717; color: white; 
-            padding: 8px 16px; border-radius: 6px; font-weight: bold; transition: 0.2s;
-        }
-        button:hover { background: #383838; }
+        #sidebar { position: absolute; top: 20px; left: 20px; bottom: 20px; width: 320px; background: rgba(30, 30, 30, 0.9); backdrop-filter: blur(10px); z-index: 999; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header h2 { margin: 0 0 15px 0; font-size: 18px; color: #fff; display: flex; align-items: center; gap: 8px;}
+        .api-setup input { width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 12px; }
+
+        .tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tab-btn { flex: 1 1 33%; background: none; border: none; color: #aaa; padding: 12px 0; font-size: 13px; cursor: pointer; transition: 0.3s; }
+        .tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .tab-btn.active { color: #0070f3; font-weight: bold; border-bottom: 2px solid #0070f3; background: rgba(0, 112, 243, 0.1); }
+
+        .workspace { padding: 20px; flex-grow: 1; overflow-y: auto; display: none; }
+        .workspace.active { display: block; }
+        .workspace label { display: block; font-size: 12px; color: #aaa; margin-bottom: 5px; }
+        .workspace textarea, .workspace input { width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 15px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 14px; resize: vertical; }
+        
+        .generate-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #0070f3, #8a2be2); border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 112, 243, 0.4); }
+        .generate-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .generate-btn:active { transform: translateY(1px); }
     </style>
 </head>
 <body>
-    <div id="api-panel">
-        <input id="apiUrl" type="text" placeholder="API 接口地址 (如 https://api.xxx.com/v1/chat/completions)" style="width: 250px;" />
-        <input id="apiKey" type="password" placeholder="输入你的 API Key" style="width: 150px;" />
-        <input id="modelName" type="text" placeholder="模型名 (如 gpt-4o)" style="width: 120px;" />
-        <input id="promptText" type="text" placeholder="输入你想生成的内容..." style="width: 200px;" />
-        <button onclick="callCustomAPI()" id="runBtn">🚀 发送请求</button>
+    
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>⚙️ 全局 API 配置</h2>
+            <div class="api-setup">
+                <input id="globalApiUrl" type="text" placeholder="全局接口地址 (如 https://api.xxx.com/v1)" />
+                <input id="globalApiKey" type="password" placeholder="填写你的 API Key" />
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('chat')">💬 AI对话</button>
+            <button class="tab-btn" onclick="switchTab('t2i')">🎨 文生图</button>
+            <button class="tab-btn" onclick="switchTab('i2i')">🖼️ 图生图</button>
+            <button class="tab-btn" onclick="switchTab('t2v')">🎬 文生视频</button>
+            <button class="tab-btn" onclick="switchTab('i2v')">🎞️ 图视频</button>
+        </div>
+
+        <div id="tab-chat" class="workspace active">
+            <label>模型名称</label>
+            <input id="chatModel" type="text" value="gpt-4o" />
+            <label>你想聊点什么？</label>
+            <textarea id="chatPrompt" rows="4" placeholder="例如：帮我写一段山海经异兽出场的旁白..."></textarea>
+            <button class="generate-btn" onclick="runNode('chat')">发送并生成文本卡片</button>
+        </div>
+
+        <div id="tab-t2i" class="workspace"><button class="generate-btn" onclick="runNode('t2i')">暂未打通</button></div>
+        <div id="tab-i2i" class="workspace"><button class="generate-btn" onclick="runNode('i2i')">暂未打通</button></div>
+        <div id="tab-t2v" class="workspace"><button class="generate-btn" onclick="runNode('t2v')">暂未打通</button></div>
+        <div id="tab-i2v" class="workspace"><button class="generate-btn" onclick="runNode('i2v')">暂未打通</button></div>
     </div>
     
     <div id="my-canvas"></div>
 
+    <script>
+        // UI 切换逻辑
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.workspace').forEach(ws => ws.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        };
+    </script>
+
     <script type="module">
-        import { Tldraw } from 'https://esm.sh/tldraw'
-        new Tldraw({ container: document.getElementById('my-canvas') })
+        import React from 'https://esm.sh/react@18'
+        import ReactDOM from 'https://esm.sh/react-dom@18/client'
+        import { Tldraw, createShapeId } from 'https://esm.sh/tldraw'
 
-        // 核心：调用市场上通用 API 的逻辑
-        window.callCustomAPI = async () => {
-            const url = document.getElementById('apiUrl').value;
-            const key = document.getElementById('apiKey').value;
-            const model = document.getElementById('modelName').value;
-            const prompt = document.getElementById('promptText').value;
-            const btn = document.getElementById('runBtn');
+        // 建立一个全局变量作为“方向盘”
+        window.myEditor = null; 
 
-            // 检查是否漏填
-            if(!url || !key || !model || !prompt) {
-                alert("请填满所有输入框后再发送！");
+        // 挂载画布引擎
+        const App = () => {
+            return React.createElement(Tldraw, {
+                onMount: (editor) => {
+                    window.myEditor = editor; // 成功夺取画布控制权！
+                    console.log("画布引擎已启动！");
+                }
+            })
+        }
+        const root = ReactDOM.createRoot(document.getElementById('my-canvas'));
+        root.render(React.createElement(App));
+
+        // 统一的 API 调度函数
+        window.runNode = async function(nodeType) {
+            if (!window.myEditor) {
+                alert("引擎还在加载中，请稍等一秒！");
                 return;
             }
 
-            btn.innerText = "⏳ 模型思考中...";
-            btn.style.background = "#0070f3";
+            const url = document.getElementById('globalApiUrl').value;
+            const key = document.getElementById('globalApiKey').value;
+            
+            if(!url || !key) {
+                alert("⚠️ 请先在顶部配置全局的 API 接口地址和 Key！");
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ 节点思考中...";
+            btn.style.opacity = "0.7";
 
             try {
-                // 组装市场上最通用的 OpenAI 兼容格式请求包
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + key
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: [{"role": "user", "content": prompt}]
-                    })
-                });
+                if (nodeType === 'chat') {
+                    const prompt = document.getElementById('chatPrompt').value;
+                    const model = document.getElementById('chatModel').value;
+                    
+                    // 1. 发送请求给 API
+                    const response = await fetch(url + '/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+                        body: JSON.stringify({ model: model, messages: [{"role": "user", "content": prompt}] })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if(data.choices && data.choices[0].message) {
+                        const resultText = data.choices[0].message.content;
+                        
+                        // 2. 算出一个合适的位置（放在屏幕正中央）
+                        const bounds = window.myEditor.getViewportPageBounds();
+                        const centerX = bounds.x + bounds.w / 2;
+                        const centerY = bounds.y + bounds.h / 2;
 
-                if (!response.ok) {
-                    throw new Error(`服务器返回错误代码: ${response.status}`);
+                        // 3. 召唤便利贴！
+                        window.myEditor.createShapes([{
+                            id: createShapeId(),
+                            type: 'note', 
+                            x: centerX,
+                            y: centerY,
+                            props: {
+                                text: prompt + "\n\n" + resultText, // 把问题和答案拼在一起
+                                color: 'blue',
+                                size: 'm'
+                            }
+                        }]);
+
+                    } else { 
+                        throw new Error(JSON.stringify(data)); 
+                    }
+                } else {
+                    alert("这个功能暂未开放！");
                 }
-
-                const data = await response.json();
-                
-                // 解析返回的文字结果
-                const resultText = data.choices[0].message.content;
-                
-                // 暂时用弹窗展示结果（后续我们再把它渲染成画布上的便签）
-                alert("🎉 生成成功：\n\n" + resultText);
-
             } catch (error) {
-                alert("❌ 请求失败，请检查网址和 Key 是否正确。\n详细错误：" + error.message);
+                alert("❌ 运行失败：\n" + error.message);
             } finally {
-                // 恢复按钮状态
-                btn.innerText = "🚀 发送请求";
-                btn.style.background = "#171717";
+                btn.innerText = originalText;
+                btn.style.opacity = "1";
             }
-        }
+        };
     </script>
 </body>
 </html>
