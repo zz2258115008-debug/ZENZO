@@ -3,14 +3,11 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI 漫剧工作站 - 独立产出节点版</title>
+    <title>AI 漫剧工作站 - 万能模型调用版</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            /* 默认马卡龙纸张背景 */
-            --bg-color: #fdfbf7; 
-            --grid-line: #e8e4dc;
-            /* 柔和马卡龙色系 */
+            --bg-paper: #fdfbf7; --grid-line: #e8e4dc;
             --m-blue: #a3c9f1; --m-blue-light: #eef5fc;
             --m-pink: #f1a3b8; --m-pink-light: #fceef2;
             --m-green: #a3f1c9; --m-green-light: #eefcee;
@@ -22,32 +19,31 @@
 
         body { margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text-main); user-select: none; }
         
-        /* 1. 画布与动态背景 */
-        #viewport { position: absolute; left: 60px; right: 320px; top: 0; bottom: 0; overflow: hidden; cursor: grab; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); background-color: var(--bg-color); }
+        #viewport { position: absolute; left: 60px; right: 320px; top: 0; bottom: 0; overflow: hidden; cursor: grab; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); background-color: var(--bg-paper); }
         .bg-grid { background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 30px 30px; }
         .bg-dot { background-image: radial-gradient(circle at 1px 1px, var(--grid-line) 2px, transparent 0); background-size: 30px 30px; }
         .bg-pure { background-image: none; }
-        .bg-dark { --bg-color: #1a1a1a; --grid-line: #333; color: #eee; }
+        .bg-dark { --bg-color: #1a1a1a; --grid-line: #333; color: #eee; background-color: var(--bg-color); }
         .bg-dark .bg-grid { background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); }
 
-        #canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
-        #svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
-        .wire { fill: none; stroke: var(--wire-color); stroke-width: 4; transition: stroke 0.2s; stroke-linecap: round; }
-        .wire.active { stroke: #6c5ce7; stroke-width: 5; }
-        .wire.temp { stroke-dasharray: 8 8; animation: dash 0.5s linear infinite; stroke: var(--m-blue); pointer-events: none;}
+        #canvas { position: absolute; width: 20000px; height: 20000px; left: -10000px; top: -10000px; transform-origin: 10000px 10000px; }
+        #svg-layer { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: visible;}
+        
+        .wire { fill: none; stroke: var(--wire-color); stroke-width: 4; stroke-linecap: round; transition: stroke 0.3s; }
+        .wire.connected { stroke: #6c5ce7; stroke-width: 5; }
+        .wire.active-flow { stroke: #00b894; stroke-dasharray: 10 10; animation: flowData 0.6s linear infinite; }
+        @keyframes flowData { to { stroke-dashoffset: -20; } }
+        .wire.temp { stroke-dasharray: 8 8; animation: dash 0.5s linear infinite; stroke: #0984e3;}
         @keyframes dash { to { stroke-dashoffset: -16; } }
 
-        /* 2. 左侧工具栏 */
         #toolbar { position: absolute; left: 10px; top: 20px; width: 44px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); display: flex; flex-direction: column; align-items: center; padding: 15px 0; z-index: 100; gap: 12px; border: 1px solid #fff;}
         .tool-btn { width: 32px; height: 32px; border-radius: 10px; border: none; background: transparent; color: var(--text-sub); font-size: 14px; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
-        .tool-btn:hover { background: #f0f4f8; color: var(--m-blue); }
+        .tool-btn:hover { background: #f0f4f8; color: #0984e3; }
 
-        /* 3. 右侧可折叠面板 */
         #right-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 320px; background: #fff; border-left: 1px solid var(--border-soft); box-shadow: -5px 0 20px rgba(0,0,0,0.03); display: flex; flex-direction: column; z-index: 100; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         #right-panel.collapsed { transform: translateX(100%); }
-        /* 展开/收起按钮 */
         #panel-toggle { position: absolute; left: -24px; top: 50%; transform: translateY(-50%); width: 24px; height: 48px; background: #fff; border: 1px solid var(--border-soft); border-right: none; border-radius: 12px 0 0 12px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: -2px 0 5px rgba(0,0,0,0.02); color: var(--text-sub); transition: 0.2s; }
-        #panel-toggle:hover { color: var(--m-blue); background: #f8f9fa; }
+        #panel-toggle:hover { color: #0984e3; background: #f8f9fa; }
 
         .panel-tabs { display: flex; border-bottom: 1px solid var(--border-soft); background: #fafafa; }
         .panel-tab { flex: 1; padding: 15px 0; text-align: center; font-size: 13px; color: var(--text-sub); cursor: pointer; font-weight: bold; transition: 0.2s;}
@@ -55,13 +51,11 @@
         .panel-content { flex: 1; overflow-y: auto; display: none; flex-direction: column; }
         .panel-content.active { display: flex; }
 
-        /* 设置区 */
         .settings-area { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .settings-area label { font-size: 12px; color: var(--text-sub); font-weight: bold; }
         .settings-area input, .settings-area select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; background: #fafafa; transition: 0.2s; }
         .settings-area input:focus, .settings-area select:focus { border-color: #6c5ce7; background: #fff; }
 
-        /* 聊天区 */
         #chat-window { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; background: #fafafa;}
         .msg { display: flex; width: 100%; }
         .msg.user { justify-content: flex-end; }
@@ -75,52 +69,51 @@
         .send-btn { padding: 10px; background: #6c5ce7; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .send-btn:hover { background: #5b4bc4; }
 
-        /* ================= 4. 马卡龙便签节点引擎 ================= */
-        #nodes-container { position: absolute; top: 0; left: 0; z-index: 1; }
-        .node { position: absolute; border-radius: 8px; box-shadow: 2px 5px 15px rgba(0,0,0,0.06), 5px 10px 25px rgba(0,0,0,0.04); width: 260px; display: flex; flex-direction: column; transition: transform 0.1s, box-shadow 0.2s; }
+        #nodes-container { position: absolute; width: 100%; height: 100%; z-index: 1; pointer-events: none;}
+        .node { position: absolute; border-radius: 8px; box-shadow: 2px 5px 15px rgba(0,0,0,0.06), 5px 10px 25px rgba(0,0,0,0.04); width: 260px; display: flex; flex-direction: column; transition: transform 0.1s; pointer-events: auto; }
         .node::after { content: ""; position: absolute; bottom: 0; right: 0; width: 25px; height: 25px; background: linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(255,255,255,0.4) 100%); border-top-left-radius: 6px; pointer-events: none; }
-        .node:hover { transform: translateY(-2px); box-shadow: 3px 8px 20px rgba(0,0,0,0.08), 8px 15px 30px rgba(0,0,0,0.06); z-index: 10;}
+        .node.selected { border: 1px solid #6c5ce7; box-shadow: 0 8px 30px rgba(108,92,231,0.2); z-index: 10; }
         
         .node-header { padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; cursor: move; font-size: 14px; font-weight: bold; color: rgba(0,0,0,0.6); border-bottom: 1px solid rgba(0,0,0,0.05); }
         .node-header i { cursor: pointer; color: rgba(0,0,0,0.3); transition: 0.2s; }
         .node-header i:hover { color: #ff5252; }
 
         .node-content { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .node-content input, .node-content select, .node-content textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; font-size: 12px; outline: none; background: rgba(255,255,255,0.5); color: #333; font-family: inherit; transition: 0.2s;}
-        .node-content input:focus, .node-content select:focus, .node-content textarea:focus { background: #fff; border-color: rgba(0,0,0,0.3); }
+        .node-content label { font-size: 11px; color: var(--text-sub); margin-bottom: -6px; font-weight: bold;}
+        .node-content input, .node-content textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; font-size: 12px; outline: none; background: rgba(255,255,255,0.5); color: #333; font-family: inherit; transition: 0.2s;}
+        .node-content input:focus, .node-content textarea:focus { background: #fff; border-color: #6c5ce7; }
         
-        .run-node-btn { background: rgba(0,0,0,0.7); color: #fff; border: none; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .run-node-btn { background: rgba(0,0,0,0.7); color: #fff; border: none; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 5px; }
         .run-node-btn:hover { background: #000; }
 
-        /* 独立的产出节点 (图片/视频专用) */
-        .result-media { width: 100%; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block; background: #eee;}
+        .result-media { width: 100%; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block; background: #eee; min-height: 100px;}
         .action-row { display: flex; gap: 8px; margin-top: 10px; }
-        .action-btn { flex: 1; padding: 8px; background: rgba(255,255,255,0.8); border: 1px solid rgba(0,0,0,0.05); border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; color: #444; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 5px;}
-        .action-btn:hover { background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transform: translateY(-1px); }
+        .action-btn { flex: 1; padding: 8px; background: rgba(255,255,255,0.8); border: 1px solid rgba(0,0,0,0.05); border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; color: #444; transition: 0.2s; text-align: center; text-decoration: none; display: flex; justify-content: center; align-items: center; gap: 5px;}
+        .action-btn:hover { background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transform: translateY(-1px); color: #6c5ce7;}
 
-        /* ================= 5. 加大判定面积的物理端口 ================= */
-        .port-container { position: absolute; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; cursor: crosshair; z-index: 20; }
+        .port-wrapper { position: absolute; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: crosshair; z-index: 20; border-radius: 50%; }
         .port { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid rgba(0,0,0,0.4); transition: 0.2s; pointer-events: none; }
-        .port-container:hover .port { transform: scale(1.5); border-color: #6c5ce7; box-shadow: 0 0 10px rgba(108,92,231,0.3);}
-        .port-container.snap-target .port { transform: scale(1.8); border-color: #00b894; background: #e8f8f5; }
+        .port-wrapper:hover .port { transform: scale(1.5); border-color: #6c5ce7; box-shadow: 0 0 10px rgba(108,92,231,0.3);}
+        .port-wrapper.magnet-active .port { transform: scale(1.8); border-color: #00b894; background: #e8f8f5; }
         
         .port-in { left: -20px; }
         .port-out { right: -20px; }
+        .port-wrapper[data-type="image"] .port { border-color: #b197fc; }
+        .port-wrapper[data-type="text"] .port { border-color: #4dabf7; }
 
-        /* 双击菜单 */
-        .context-menu { position: absolute; display: none; z-index: 2000; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border: 1px solid #eee; border-radius: 12px; padding: 8px; color: #333; box-shadow: 0 10px 40px rgba(0,0,0,0.15); min-width: 140px; }
+        .context-menu { position: absolute; display: none; z-index: 2000; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border: 1px solid #eee; border-radius: 12px; padding: 8px; color: #333; box-shadow: 0 10px 40px rgba(0,0,0,0.15); min-width: 150px; }
         .context-menu .menu-title { font-size: 11px; color: #aaa; padding: 4px 8px 8px; border-bottom: 1px solid #eee; margin-bottom: 4px; }
         .context-menu .menu-item { padding: 10px; font-size: 13px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; font-weight: 500;}
         .context-menu .menu-item:hover { background: #f0f4f8; color: #6c5ce7; }
     </style>
 </head>
-<body>
+<body class="bg-grid">
 
     <div id="toolbar">
-        <button class="tool-btn" onclick="newProject()" title="新建项目 (清空画布)"><i class="fas fa-file-medical"></i></button>
+        <button class="tool-btn" onclick="newProject()" title="新建项目 (清空)"><i class="fas fa-file-medical"></i></button>
         <div style="width: 20px; height: 1px; background: #eee;"></div>
         <button class="tool-btn" onclick="viewport.style.cursor='grab'" title="平移视角"><i class="fas fa-hand"></i></button>
-        <button class="tool-btn" onclick="viewport.style.transform='translate(0px, 0px) scale(1)'; panX=0; panY=0; scale=1;" title="视角归中"><i class="fas fa-compress-arrows-alt"></i></button>
+        <button class="tool-btn" onclick="centerCanvas()" title="视角归中"><i class="fas fa-compress-arrows-alt"></i></button>
     </div>
 
     <div id="right-panel">
@@ -132,10 +125,10 @@
         
         <div id="panel-chat" class="panel-content active">
             <div id="chat-window">
-                <div class="msg ai"><div class="bubble">💡 <b>史诗级进化：</b><br>1. 点击生成后，图片/视频将<b>单独分裂为一个新节点</b>。<br>2. 新增【⬇️下载】与一键【设为参考图】功能。<br>3. 连线增加了<b>磁吸判定</b>，怎么拖都能连上！</div></div>
+                <div class="msg ai"><div class="bubble">💡 <b>自由调用系统已激活：</b><br>1. 模型框不再受限，可直接填入后台复制的模型名 (如 <code>nano-banana-pro</code>)。<br>2. 尺寸框可清空或填入任意格式。</div></div>
             </div>
             <div class="chat-input-box">
-                <input id="chatModel" type="text" value="gpt-4o" style="padding:6px; border:1px solid #eee; border-radius:6px; font-size:12px; outline:none; width: 80px;" />
+                <input id="chatModel" type="text" value="gpt-4o" style="padding:6px; border:1px solid #eee; border-radius:6px; font-size:12px; outline:none; width: 80px;" placeholder="对话模型" />
                 <textarea id="chatInput" rows="3" placeholder="输入对话打磨剧本..."></textarea>
                 <button class="send-btn" onclick="sendChat()">发 送</button>
             </div>
@@ -144,7 +137,7 @@
         <div id="panel-settings" class="panel-content">
             <div class="settings-area">
                 <label>画布背景风格</label>
-                <select id="bg-selector" onchange="changeBackground(this.value)">
+                <select id="bg-selector" onchange="document.body.className = this.value">
                     <option value="bg-grid">马卡龙网格纸</option>
                     <option value="bg-dot">创意波点矩阵</option>
                     <option value="bg-pure">极简纯净白纸</option>
@@ -159,7 +152,7 @@
         </div>
     </div>
 
-    <div id="viewport" class="bg-grid">
+    <div id="viewport">
         <div id="canvas">
             <svg id="svg-layer"></svg>
             <div id="nodes-container"></div>
@@ -167,10 +160,10 @@
     </div>
 
     <div id="add-menu" class="context-menu">
-        <div class="menu-title">新建工具节点</div>
-        <div class="menu-item" onclick="spawnNode('text')">📝 设定文本</div>
-        <div class="menu-item" onclick="spawnNode('t2i')">🎨 文生图 (加工厂)</div>
-        <div class="menu-item" onclick="spawnNode('video')">🎬 生视频 (加工厂)</div>
+        <div class="menu-title">新建节点工具</div>
+        <div class="menu-item" onclick="spawnNode('text')">📝 设定文案</div>
+        <div class="menu-item" onclick="spawnNode('t2i')">🎨 AI 生图加工厂</div>
+        <div class="menu-item" onclick="spawnNode('video')">🎬 AI 视频加工厂</div>
     </div>
 
     <script>
@@ -179,24 +172,14 @@
         const svgLayer = document.getElementById('svg-layer');
         const nodesContainer = document.getElementById('nodes-container');
 
-        // ================= 马卡龙盲盒色系 =================
         const nodeColors = ['#fceef2', '#eef5fc', '#eefcee', '#fcfbee', '#f5eefc', '#f5f5f5'];
         
-        // ================= UI 与设置逻辑 =================
         let isPanelCollapsed = false;
         function toggleRightPanel() {
-            const panel = document.getElementById('right-panel');
-            const icon = document.getElementById('toggle-icon');
             isPanelCollapsed = !isPanelCollapsed;
-            if(isPanelCollapsed) {
-                panel.classList.add('collapsed');
-                viewport.style.right = '0px';
-                icon.className = 'fas fa-chevron-left';
-            } else {
-                panel.classList.remove('collapsed');
-                viewport.style.right = '320px';
-                icon.className = 'fas fa-chevron-right';
-            }
+            document.getElementById('right-panel').classList.toggle('collapsed', isPanelCollapsed);
+            viewport.style.right = isPanelCollapsed ? '0px' : '320px';
+            document.getElementById('toggle-icon').className = isPanelCollapsed ? 'fas fa-chevron-left' : 'fas fa-chevron-right';
         }
 
         function switchRightPanel(tab) {
@@ -206,45 +189,27 @@
             document.getElementById(`panel-${tab}`).classList.add('active');
         }
 
-        function changeBackground(className) {
-            viewport.className = className;
-        }
-
         function newProject() {
-            if(confirm("确定要新建项目吗？当前的画布及连线将被全部清空！")) {
-                nodesContainer.innerHTML = '';
-                svgLayer.innerHTML = '';
-                connections = [];
+            if(confirm("确定要新建项目吗？当前的画布将被清空！")) {
+                nodesContainer.innerHTML = ''; svgLayer.innerHTML = ''; connections = [];
                 Object.keys(workflowData).forEach(k => delete workflowData[k]);
-                viewport.style.transform='translate(0px, 0px) scale(1)'; panX=0; panY=0; scale=1;
+                centerCanvas();
             }
         }
 
-        // ================= 画布菜单与漫游 =================
-        let clickX = 0, clickY = 0;
-        function hideMenus() { document.getElementById('add-menu').style.display = 'none'; }
-        window.addEventListener('mousedown', (e) => { if(!e.target.closest('.context-menu')) hideMenus(); });
+        let scale = 1, panX = 10000, panY = 10000, isPanning = false, startX, startY;
+        function updateCanvas() { canvas.style.transform = `translate(${panX - 10000}px, ${panY - 10000}px) scale(${scale})`; }
+        function centerCanvas() { panX = 10000; panY = 10000; scale = 1; updateCanvas(); updateAllWires(); }
+        centerCanvas();
 
-        viewport.addEventListener('dblclick', (e) => {
-            if(e.target.closest('.node')) return; 
-            const rightOffset = isPanelCollapsed ? 0 : 320;
-            clickX = (e.clientX - 60 - panX) / scale;
-            clickY = (e.clientY - panY) / scale;
-            const menu = document.getElementById('add-menu');
-            menu.style.left = e.clientX + 'px';
-            menu.style.top = e.clientY + 'px';
-            menu.style.display = 'block';
-        });
-
-        let scale = 1, panX = 0, panY = 0, isPanning = false, startX, startY;
         viewport.addEventListener('mousedown', (e) => {
-            if(e.target.closest('.node') || e.target.closest('.port-container')) return; 
+            if(e.target.closest('.node') || e.target.closest('.port-wrapper')) return; 
             if(e.button === 0) { isPanning = true; viewport.style.cursor = 'grabbing'; startX = e.clientX - panX; startY = e.clientY - panY; }
         });
         window.addEventListener('mousemove', (e) => {
             if (!isPanning) return;
             panX = e.clientX - startX; panY = e.clientY - startY;
-            canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+            updateCanvas();
         });
         window.addEventListener('mouseup', () => { isPanning = false; viewport.style.cursor = 'grab'; });
         viewport.addEventListener('wheel', (e) => {
@@ -252,33 +217,42 @@
             const newScale = Math.min(Math.max(0.2, scale + (e.deltaY * -0.001)), 2);
             const mouseX = e.clientX - panX - 60; const mouseY = e.clientY - panY;
             panX -= mouseX * (newScale / scale - 1); panY -= mouseY * (newScale / scale - 1);
-            scale = newScale; canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-            updateAllWires();
+            scale = newScale; updateCanvas(); updateAllWires();
         }, { passive: false });
 
-        // ================= 完美磁吸连线系统 =================
+        let clickX = 0, clickY = 0;
+        function showMenu(e) {
+            if(e.target.closest('.node')) return;
+            e.preventDefault();
+            const rightOffset = isPanelCollapsed ? 0 : 320;
+            clickX = (e.clientX - 60 - panX + 10000) / scale;
+            clickY = (e.clientY - panY + 10000) / scale;
+            const menu = document.getElementById('add-menu');
+            menu.style.left = e.clientX + 'px'; menu.style.top = e.clientY + 'px';
+            menu.style.display = 'block';
+        }
+        viewport.addEventListener('dblclick', showMenu);
+        viewport.addEventListener('contextmenu', showMenu);
+        window.addEventListener('mousedown', (e) => { if(!e.target.closest('.context-menu')) document.getElementById('add-menu').style.display = 'none'; });
+
+        // ================= 绝对坐标磁吸连线系统 =================
         let connections = []; 
-        let isWiring = false, tempWire = null, wiringStartPort = null;
-        let activeSnapPort = null;
+        let isWiring = false, tempWire = null, startPortConfig = null, magnetTarget = null;
 
         function createBezier(x1, y1, x2, y2) {
-            const dx = Math.abs(x2 - x1) * 0.5 + 60;
+            const dx = Math.abs(x2 - x1) * 0.5 + 80;
             return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
         }
 
-        // 精确获取端口圆心的相对于画布的绝对坐标！彻底修复连线乱飘的问题。
-        function getPortCoords(portContainer) {
-            const rect = portContainer.getBoundingClientRect();
+        function getPortCoords(portEl) {
+            const rect = portEl.getBoundingClientRect();
             const cvsRect = canvas.getBoundingClientRect();
-            return { 
-                x: (rect.left + rect.width/2 - cvsRect.left) / scale, 
-                y: (rect.top + rect.height/2 - cvsRect.top) / scale 
-            };
+            return { x: (rect.left + rect.width/2 - cvsRect.left)/scale, y: (rect.top + rect.height/2 - cvsRect.top)/scale };
         }
 
         function updateAllWires() {
             connections.forEach(c => {
-                const p1 = getPortCoords(c.fromPort); const p2 = getPortCoords(c.toPort);
+                const p1 = getPortCoords(c.outPort); const p2 = getPortCoords(c.inPort);
                 c.pathEl.setAttribute('d', createBezier(p1.x, p1.y, p2.x, p2.y));
             });
         }
@@ -286,7 +260,8 @@
         window.addEventListener('mousedown', (e) => {
             const port = e.target.closest('.port-out');
             if (port) {
-                isWiring = true; wiringStartPort = port;
+                isWiring = true; 
+                startPortConfig = { el: port, type: port.dataset.type, nodeId: port.closest('.node').id };
                 tempWire = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 tempWire.setAttribute('class', 'wire temp');
                 svgLayer.appendChild(tempWire);
@@ -296,26 +271,26 @@
 
         window.addEventListener('mousemove', (e) => {
             if (isWiring && tempWire) {
-                const p1 = getPortCoords(wiringStartPort);
+                const p1 = getPortCoords(startPortConfig.el);
                 let mouseX = (e.clientX - canvas.getBoundingClientRect().left) / scale;
                 let mouseY = (e.clientY - canvas.getBoundingClientRect().top) / scale;
                 
-                // 磁吸算法核心
-                if(activeSnapPort) activeSnapPort.classList.remove('snap-target');
-                activeSnapPort = null;
-                let minDist = 60; // 磁吸探测半径
+                if(magnetTarget) { magnetTarget.classList.remove('magnet-active'); magnetTarget = null; }
+                let minDist = 50; 
 
                 document.querySelectorAll('.port-in').forEach(inPort => {
-                    if(inPort.closest('.node').id === wiringStartPort.closest('.node').id) return;
-                    const p2 = getPortCoords(inPort);
-                    const dist = Math.hypot(mouseX - p2.x, mouseY - p2.y);
-                    if(dist < minDist) { minDist = dist; activeSnapPort = inPort; }
+                    if(inPort.closest('.node').id === startPortConfig.nodeId) return;
+                    const rect = inPort.getBoundingClientRect();
+                    const portCenterX = rect.left + rect.width / 2;
+                    const portCenterY = rect.top + rect.height / 2;
+                    const dist = Math.hypot(e.clientX - portCenterX, e.clientY - portCenterY);
+                    if(dist < minDist) { minDist = dist; magnetTarget = inPort; }
                 });
 
-                if(activeSnapPort) {
-                    activeSnapPort.classList.add('snap-target');
-                    const snapCoords = getPortCoords(activeSnapPort);
-                    mouseX = snapCoords.x; mouseY = snapCoords.y; // 强行拉向目标中心
+                if(magnetTarget) {
+                    magnetTarget.classList.add('magnet-active');
+                    const snapCoords = getPortCoords(magnetTarget);
+                    mouseX = snapCoords.x; mouseY = snapCoords.y;
                 }
 
                 tempWire.setAttribute('d', createBezier(p1.x, p1.y, mouseX, mouseY));
@@ -324,38 +299,40 @@
 
         window.addEventListener('mouseup', (e) => {
             if (isWiring) {
-                if (activeSnapPort) {
-                    createPhysicalConnection(wiringStartPort, activeSnapPort);
-                    activeSnapPort.classList.remove('snap-target');
-                    flowDataDownstream(wiringStartPort.closest('.node').id); // 连线后立刻传数据
+                if (magnetTarget) {
+                    createConnection(startPortConfig.el, magnetTarget);
+                    magnetTarget.classList.remove('magnet-active');
                 }
                 if (tempWire) tempWire.remove();
-                isWiring = false; wiringStartPort = null; activeSnapPort = null;
+                isWiring = false; startPortConfig = null; magnetTarget = null;
             }
         });
 
-        function createPhysicalConnection(outPort, inPort) {
-            if(connections.find(c => c.fromPort === outPort && c.toPort === inPort)) return;
+        function createConnection(outPort, inPort) {
+            if(connections.find(c => c.outPort === outPort && c.inPort === inPort)) return;
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('class', 'wire active');
+            path.setAttribute('class', 'wire connected');
             svgLayer.appendChild(path);
-            connections.push({
-                fromNode: outPort.closest('.node').id, toNode: inPort.closest('.node').id,
-                fromPort: outPort, toPort: inPort, pathEl: path, targetInputType: inPort.dataset.type 
-            });
+            
+            const conn = {
+                outNode: outPort.closest('.node').id, inNode: inPort.closest('.node').id,
+                outPort: outPort, inPort: inPort, pathEl: path, dataType: outPort.dataset.type 
+            };
+            connections.push(conn);
             updateAllWires();
+            syncData(conn);
         }
 
-        // ================= 节点工厂：支持独立产出节点 =================
+        // ================= 万能节点工厂 =================
         let nodeIndex = 0;
         const workflowData = {}; 
 
-        window.spawnNode = function(type) { hideMenus(); addNode(type, clickX, clickY); }
+        window.spawnNode = function(type) { document.getElementById('add-menu').style.display='none'; buildNode(type, clickX, clickY); }
 
-        function addNode(type, x, y, extraData = null) {
+        function buildNode(type, x, y, extraData = null) {
             nodeIndex++; const nodeId = `node_${nodeIndex}`;
             const node = document.createElement('div');
-            node.className = `node ${type}-node`; node.id = nodeId;
+            node.className = `node`; node.id = nodeId;
             node.style.left = `${x}px`; node.style.top = `${y}px`;
             node.style.backgroundColor = nodeColors[Math.floor(Math.random() * nodeColors.length)];
 
@@ -363,71 +340,64 @@
             
             if (type === 'text') {
                 html = `
-                    <div class="node-header"><span>📝 设定文案</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
-                    <div class="node-content"><textarea id="val_${nodeId}" rows="5" placeholder="写下你的设定..."></textarea></div>
-                    <div class="port-container port-out" style="top:50%;"><div class="port"></div></div>`;
+                    <div class="node-header"><span>📝 文本设定</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
+                    <div class="node-content">
+                        <textarea id="val_${nodeId}" rows="5" placeholder="写下场景设定..."></textarea>
+                    </div>
+                    <div class="port-wrapper port-out" data-type="text" style="top:50%;"><div class="port" title="输出文本"></div></div>`;
             } 
             else if (type === 't2i') {
                 html = `
-                    <div class="node-header"><span>🎨 生图加工厂</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
+                    <div class="node-header"><span>🎨 AI 生图加工厂</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
                     <div class="node-content">
-                        <input id="model_${nodeId}" type="text" value="dall-e-3" placeholder="模型" />
-                        <select id="size_${nodeId}">
-                            <option value="1024x1024">方图 (1024x1024)</option>
-                            <option value="1792x1024">横屏 (1792x1024)</option>
-                            <option value="1024x1792">竖屏 (1024x1792)</option>
-                        </select>
-                        <textarea id="val_${nodeId}" rows="3" placeholder="描述画面或左侧连线传入..."></textarea>
-                        <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'image')">⚡ 开始生成独立图卡</button>
+                        <label>模型名称 (可填任意模型)</label>
+                        <input id="model_${nodeId}" type="text" value="dall-e-3" placeholder="如: nano-banana-pro" />
+                        <label>尺寸/比例 (选填，支持任意格式)</label>
+                        <input id="size_${nodeId}" type="text" value="1024x1024" placeholder="留空, 或填 16:9, 1024x1024..." />
+                        <label>画面提示词</label>
+                        <textarea id="val_${nodeId}" rows="3" placeholder="左侧连线可自动填入..."></textarea>
+                        <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'image')">⚡ 开始生产独立图卡</button>
                     </div>
-                    <div class="port-container port-in" data-type="prompt" style="top:110px;"><div class="port"></div></div>`;
+                    <div class="port-wrapper port-in" data-type="text" data-target="val_${nodeId}" style="top:190px;"><div class="port" title="接收提示词文本"></div></div>`;
             }
             else if (type === 'video') {
                 html = `
-                    <div class="node-header"><span>🎬 视频加工厂</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
+                    <div class="node-header"><span>🎬 AI 视频加工厂</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
                     <div class="node-content">
+                        <label>模型名称</label>
                         <input id="model_${nodeId}" type="text" value="kling-v1" />
-                        <input id="ref_${nodeId}" type="text" placeholder="首帧图 URL (从图卡连线传入)"/>
-                        <textarea id="val_${nodeId}" rows="2" placeholder="运镜与动态..."></textarea>
-                        <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'video')">⚡ 开始渲染独立视频</button>
+                        <label>首帧参考图 (从独立图片连线过来)</label>
+                        <input id="ref_${nodeId}" type="text" readonly style="background:#e9ecef;" placeholder="等待右侧紫点连入..."/>
+                        <label>动态与运镜</label>
+                        <textarea id="val_${nodeId}" rows="2" placeholder="如：镜头缓慢推进..."></textarea>
+                        <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'video')">⚡ 开始渲染视频</button>
                     </div>
-                    <div class="port-container port-in" data-type="image" style="top:75px;"><div class="port"></div></div>
-                    <div class="port-container port-in" data-type="prompt" style="top:115px;"><div class="port"></div></div>`;
+                    <div class="port-wrapper port-in" data-type="image" data-target="ref_${nodeId}" style="top:125px;"><div class="port" title="接收首帧图片"></div></div>
+                    <div class="port-wrapper port-in" data-type="text" data-target="val_${nodeId}" style="top:180px;"><div class="port" title="接收提示词文本"></div></div>`;
             }
-            // 【核心新增】独立的图/视频结果便签！
             else if (type === 'res-img') {
                 html = `
-                    <div class="node-header"><span>🖼️ 生成图像</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
-                    <div class="node-content">
-                        <img src="${extraData.url}" class="result-media" />
+                    <div class="node-header" style="background:#fff; color:#333; border-bottom:1px solid #eee;">
+                        <span>🖼️ 图像产物</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i>
+                    </div>
+                    <div class="node-content" style="background:transparent;">
+                        <img src="${extraData.url}" class="media-preview" />
                         <div class="action-row">
-                            <button class="action-btn" onclick="downloadFile('${extraData.url}', 'ai_image.png')"><i class="fas fa-download"></i>下载</button>
-                            <button class="action-btn" onclick="window.open('${extraData.url}')"><i class="fas fa-external-link-alt"></i>大图</button>
+                            <a class="action-btn" href="${extraData.url}" target="_blank" download="image.png"><i class="fas fa-download"></i> 下载</a>
                         </div>
                     </div>
-                    <div class="port-container port-out" style="top:50%;"><div class="port"></div></div>`;
-            }
-            else if (type === 'res-vid') {
-                html = `
-                    <div class="node-header"><span>🎞️ 生成视频</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
-                    <div class="node-content">
-                        <video src="${extraData.url}" class="result-media" controls loop autoplay></video>
-                        <div class="action-row">
-                            <button class="action-btn" onclick="downloadFile('${extraData.url}', 'ai_video.mp4')"><i class="fas fa-download"></i>下载</button>
-                        </div>
-                    </div>
-                    <div class="port-container port-out" style="top:50%;"><div class="port"></div></div>`;
+                    <div class="port-wrapper port-out" data-type="image" style="top:50%;"><div class="port" title="可连接到视频首帧"></div></div>`;
             }
 
             node.innerHTML = html;
             
-            // 节点拖拽逻辑
             const header = node.querySelector('.node-header');
             let isDragging = false, nx, ny, ix, iy;
             header.addEventListener('mousedown', (e) => {
                 isDragging = true; nx = e.clientX; ny = e.clientY;
                 ix = parseFloat(node.style.left); iy = parseFloat(node.style.top);
-                document.querySelectorAll('.node').forEach(n => n.style.zIndex = '1'); node.style.zIndex = '10';
+                document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+                node.classList.add('selected');
                 e.stopPropagation();
             });
             window.addEventListener('mousemove', (e) => {
@@ -441,107 +411,96 @@
             nodesContainer.appendChild(node);
             
             if(type === 'text') {
-                document.getElementById(`val_${nodeId}`).addEventListener('input', (e) => {
-                    workflowData[nodeId] = { type: 'text', value: e.target.value };
-                    flowDataDownstream(nodeId);
-                });
-            } else if (type === 'res-img' || type === 'res-vid') {
-                 workflowData[nodeId] = { type: 'image', value: extraData.url };
+                const ta = document.getElementById(`val_${nodeId}`);
+                ta.addEventListener('input', () => { nodeDataStore[nodeId] = ta.value; pushDataDownstream(nodeId); });
+            } else if (type === 'res-img') {
+                nodeDataStore[nodeId] = extraData.url; 
             }
             return nodeId;
         }
 
         window.deleteNode = function(id) {
             document.getElementById(id).remove();
-            const toRemove = connections.filter(c => c.fromNode === id || c.toNode === id);
+            const toRemove = connections.filter(c => c.outNode === id || c.inNode === id);
             toRemove.forEach(c => c.pathEl.remove());
-            connections = connections.filter(c => c.fromNode !== id && c.toNode !== id);
-            delete workflowData[id];
+            connections = connections.filter(c => c.outNode !== id && c.inNode !== id);
+            delete nodeDataStore[id];
         }
 
-        // ================= 数据流转与 API 调度 =================
-        function flowDataDownstream(sourceNodeId) {
-            const data = workflowData[sourceNodeId];
+        // ================= 数据传递 =================
+        function pushDataDownstream(sourceNodeId) {
+            connections.forEach(conn => { if (conn.outNode === sourceNodeId) syncData(conn); });
+        }
+
+        function syncData(conn) {
+            const data = nodeDataStore[conn.outNode];
             if (!data) return;
 
-            connections.forEach(conn => {
-                if (conn.fromNode === sourceNodeId) {
-                    const targetId = conn.toNode;
-                    const portType = conn.targetInputType; 
-                    
-                    if (data.type === 'text' && portType === 'prompt') {
-                        const el = document.getElementById(`val_${targetId}`);
-                        if(el) { el.value = data.value; el.style.background = '#eef5fc'; setTimeout(()=>el.style.background='', 300); }
-                    } 
-                    else if (data.type === 'image' && portType === 'image') {
-                        const el = document.getElementById(`ref_${targetId}`);
-                        if(el) { el.value = data.value; el.style.background = '#eef5fc'; setTimeout(()=>el.style.background='', 300); }
-                    }
+            if (conn.dataType === conn.inPort.dataset.type) {
+                const targetInputId = conn.inPort.dataset.target;
+                const el = document.getElementById(targetInputId);
+                if (el) {
+                    el.value = data;
+                    conn.pathEl.classList.add('active-flow');
+                    el.style.backgroundColor = '#e6fcf5'; el.style.borderColor = '#20c997';
+                    setTimeout(() => { 
+                        conn.pathEl.classList.remove('active-flow');
+                        el.style.backgroundColor = '#fff'; el.style.borderColor = '#ced4da';
+                    }, 800);
                 }
-            });
+            }
         }
 
-        // 【核心大更新】：加工厂运行完毕后，分裂出新的产出节点！
+        // ================= API 请求核心逻辑 =================
         window.runGenerator = async function(nodeId, type) {
             const url = document.getElementById('global-url').value.replace(/\/$/, '');
             const key = document.getElementById('global-key').value;
-            if(!url || !key) { alert("请先在右侧面板配置 API 接口和 Key！"); switchRightPanel('settings'); return; }
+            if(!url || !key) { alert("⚠️ 请先在右侧面板配置 API 接口和 Key！"); return; }
 
             const btn = document.getElementById(`btn_${nodeId}`);
             const originalText = btn.innerHTML;
-            btn.innerHTML = `处理中...`; btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 生产中...`; btn.disabled = true;
 
             const srcNode = document.getElementById(nodeId);
-            const spawnX = parseFloat(srcNode.style.left) + 290; // 在加工厂右侧生成
+            const spawnX = parseFloat(srcNode.style.left) + 320; 
             const spawnY = parseFloat(srcNode.style.top);
 
             try {
                 if (type === 'image') {
-                    const model = document.getElementById(`model_${nodeId}`).value;
-                    const prompt = document.getElementById(`val_${nodeId}`).value;
-                    const size = document.getElementById(`size_${nodeId}`).value;
+                    const model = document.getElementById(`model_${nodeId}`).value.trim();
+                    const prompt = document.getElementById(`val_${nodeId}`).value.trim();
+                    const size = document.getElementById(`size_${nodeId}`).value.trim();
+                    
+                    if(!prompt) throw new Error("提示词不能为空！");
+
+                    // 动态构建请求体，不强制加 size 参数
+                    const payload = { model: model, prompt: prompt, n: 1 };
+                    if (size !== "") payload.size = size; // 如果用户清空了尺寸框，就不发送 size 参数，完美规避各种模型的报错！
 
                     const res = await fetch(`${url}/images/generations`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-                        body: JSON.stringify({ model: model, prompt: prompt, n: 1, size: size })
+                        body: JSON.stringify(payload)
                     });
                     const data = await res.json();
                     
                     if(data.data && data.data[0].url) {
-                        // 【分裂新节点】
-                        addNode('res-img', spawnX, spawnY, { url: data.data[0].url });
-                    } else throw new Error(JSON.stringify(data));
+                        // 成功！分裂出独立的图片节点
+                        buildNode('res-img', spawnX, spawnY, { url: data.data[0].url });
+                    } else { 
+                        throw new Error(data.error ? data.error.message : JSON.stringify(data)); 
+                    }
                 } 
                 else if (type === 'video') {
                     const ref = document.getElementById(`ref_${nodeId}`).value;
-                    if(!ref) throw new Error("请先连接首帧图片 URL");
-                    // 模拟视频生成并分裂节点
-                    setTimeout(() => {
-                        addNode('res-vid', spawnX, spawnY, { url: "https://www.w3schools.com/html/mov_bbb.mp4" });
-                    }, 1000);
+                    if(!ref) throw new Error("⚠️ 必须先连线一张独立图片作为首帧！");
+                    alert(`✅ 视频请求成功发送！\n使用了图片: ${ref.substring(0,30)}...`);
                 }
-            } catch(e) { alert("失败:\n" + e.message); } 
+            } catch(e) { alert("生产失败:\n" + e.message); } 
             finally { btn.innerHTML = originalText; btn.disabled = false; }
         };
 
-        // 下载辅助函数
-        window.downloadFile = async function(url, filename) {
-            try {
-                const response = await fetch(url);
-                const blob = await response.blob();
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = filename;
-                link.click();
-                URL.revokeObjectURL(link.href);
-            } catch(e) {
-                // 如果遭遇跨域限制，回退到打开新标签页
-                window.open(url, '_blank');
-            }
-        };
-
-        // 聊天系统
+        // ================= 聊天推演区 =================
         let chatMem = [];
         window.sendChat = async function() {
             const url = document.getElementById('global-url').value.replace(/\/$/, '');
@@ -569,6 +528,21 @@
             } catch(e) { win.innerHTML += `<div class="msg ai"><div class="bubble">❌ ${e.message}</div></div>`; }
             win.scrollTop = win.scrollHeight;
         };
+
+        // 初始化演示画布
+        setTimeout(() => {
+            const t1 = buildNode('text', panX - 10000 + 100, panY - 10000 + 100);
+            const i1 = buildNode('t2i', panX - 10000 + 450, panY - 10000 + 80);
+            document.getElementById(`val_${t1}`).value = "a cute white cat in a cyberpunk city";
+            nodeDataStore[t1] = "a cute white cat in a cyberpunk city";
+            
+            setTimeout(() => {
+                const pOut = document.getElementById(t1).querySelector('.port-out');
+                const pIn = document.getElementById(i1).querySelector('.port-in[data-type="text"]');
+                if(pOut && pIn) createConnection(pOut, pIn);
+            }, 100);
+        }, 500);
+
     </script>
 </body>
 </html>
