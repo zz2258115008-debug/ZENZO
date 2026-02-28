@@ -231,7 +231,12 @@
             menu.style.left = e.clientX + 'px'; menu.style.top = e.clientY + 'px';
             menu.style.display = 'block';
         }
-        viewport.addEventListener('dblclick', showMenu);
+      viewport.addEventListener('dblclick', (e) => {
+    if (e.target.closest('.node') || e.target.closest('.port-wrapper')) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    showMenu(e);
+});
         viewport.addEventListener('contextmenu', showMenu);
         window.addEventListener('mousedown', (e) => { if(!e.target.closest('.context-menu')) document.getElementById('add-menu').style.display = 'none'; });
 
