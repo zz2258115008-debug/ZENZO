@@ -3,16 +3,11 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI 漫剧工作站 - 完整优化版</title>
+    <title>AI 漫剧工作站 - 真机万能调用版</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --bg-paper: #fdfbf7; --grid-line: #e8e4dc;
-            --m-blue: #a3c9f1; --m-blue-light: #eef5fc;
-            --m-pink: #f1a3b8; --m-pink-light: #fceef2;
-            --m-green: #a3f1c9; --m-green-light: #eefcee;
-            --m-yellow: #f1e1a3; --m-yellow-light: #fcfbee;
-            --m-purple: #c9a3f1; --m-purple-light: #f5eefc;
             --text-main: #4a4a4a; --text-sub: #888;
             --border-soft: #f0f0f0; --wire-color: #b0bec5;
         }
@@ -88,6 +83,21 @@
     </style>
 </head>
 <body class="bg-grid">
+
+    <datalist id="img-sizes">
+        <option value="1024x1024">DALL-E 3 / 标准方形</option>
+        <option value="1024x1792">DALL-E 3 竖屏</option>
+        <option value="1792x1024">DALL-E 3 宽屏</option>
+        <option value="16:9">Midjourney / 其他模型宽屏</option>
+        <option value="9:16">Midjourney / 其他模型竖屏</option>
+    </datalist>
+
+    <datalist id="vid-sizes">
+        <option value="16:9">宽屏电影感</option>
+        <option value="9:16">手机竖屏</option>
+        <option value="1:1">方形</option>
+    </datalist>
+
     <div id="toolbar">
         <button class="tool-btn" onclick="newProject()" title="新建项目 (清空)"><i class="fas fa-file-medical"></i></button>
         <div style="width: 20px; height: 1px; background: #eee;"></div>
@@ -102,7 +112,7 @@
         </div>
         <div id="panel-chat" class="panel-content active">
             <div id="chat-window">
-                <div class="msg ai"><div class="bubble">💡 <b>自由调用系统已激活：</b><br>1. 模型框不再受限，可直接填入后台复制的模型名 (如 <code>dall-e-3</code>)。<br>2. 请确保使用的中转接口支持该模型。</div></div>
+                <div class="msg ai"><div class="bubble">💡 <b>真·万能调用已部署：</b><br>无论是图片尺寸还是视频比例，如果模型有奇葩要求，你可以直接在尺寸框里手打任意字符发送。</div></div>
             </div>
             <div class="chat-input-box">
                 <input id="chatModel" type="text" value="gpt-4o" style="padding:6px; border:1px solid #eee; border-radius:6px; font-size:12px; outline:none; width: 80px;" placeholder="对话模型" />
@@ -298,35 +308,27 @@
                         <div class="node-content"><textarea id="val_${nodeId}" rows="5" placeholder="写下场景设定..."></textarea></div>
                         <div class="port-wrapper port-out" data-type="text" style="top:50%;"><div class="port" title="输出文本"></div></div>`;
                 } else if (type === 't2i') {
-                    // 优化：使用 select 提供丰富的生图尺寸选项
+                    // 硬核修复：使用带有 datalist 提示的普通 input 框。不限死选项，支持任意参数输入。
                     html = `<div class="node-header"><span>🎨 AI 生图加工厂</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
                         <div class="node-content">
-                            <label>模型名称 (如 dall-e-3)</label>
-                            <input id="model_${nodeId}" type="text" value="dall-e-3" />
-                            <label>尺寸比例</label>
-                            <select id="size_${nodeId}">
-                                <option value="1024x1024">1:1 方形 (1024x1024)</option>
-                                <option value="1024x576">16:9 宽屏 (1024x576)</option>
-                                <option value="576x1024">9:16 竖屏 (576x1024)</option>
-                            </select>
+                            <label>模型名称</label>
+                            <input id="model_${nodeId}" type="text" value="dall-e-3" placeholder="填写任意模型名称" />
+                            <label>尺寸/比例</label>
+                            <input id="size_${nodeId}" type="text" value="1024x1024" list="img-sizes" placeholder="支持下拉选，也可直接手打..." />
                             <label>画面提示词</label><textarea id="val_${nodeId}" rows="3" placeholder="左侧连线可自动填入..."></textarea>
                             <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'image')">⚡ 开始生产独立图卡</button>
                         </div>
                         <div class="port-wrapper port-in" data-type="text" data-target="val_${nodeId}" style="top:190px;"><div class="port" title="接收提示词文本"></div></div>`;
                 } else if (type === 'video') {
-                    // 优化：添加视频尺寸选项
+                    // 硬核修复：同样支持万能尺寸输入，确保传参自由度。
                     html = `<div class="node-header"><span>🎬 AI 视频加工厂</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
                         <div class="node-content">
-                            <label>模型名称</label><input id="model_${nodeId}" type="text" value="kling-v1" />
+                            <label>模型名称</label><input id="model_${nodeId}" type="text" value="kling-v1" placeholder="填写如 kling-v1, runway-gen3" />
                             <label>视频比例</label>
-                            <select id="size_${nodeId}">
-                                <option value="16:9">16:9 电影感宽屏</option>
-                                <option value="9:16">9:16 手机竖屏</option>
-                                <option value="1:1">1:1 方形</option>
-                            </select>
+                            <input id="size_${nodeId}" type="text" value="16:9" list="vid-sizes" placeholder="下拉选择或手打格式" />
                             <label>首帧参考图</label><input id="ref_${nodeId}" type="text" readonly style="background:#e9ecef;" placeholder="等待图片连入..."/>
                             <label>动态与运镜</label><textarea id="val_${nodeId}" rows="2" placeholder="如：镜头缓慢推进..."></textarea>
-                            <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'video')">⚡ 开始渲染视频</button>
+                            <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'video')">⚡ 真实渲染 API</button>
                         </div>
                         <div class="port-wrapper port-in" data-type="image" data-target="ref_${nodeId}" style="top:180px;"><div class="port" title="接收首帧图片"></div></div>
                         <div class="port-wrapper port-in" data-type="text" data-target="val_${nodeId}" style="top:235px;"><div class="port" title="接收提示词文本"></div></div>`;
@@ -338,7 +340,6 @@
                         </div>
                         <div class="port-wrapper port-out" data-type="image" style="top:50%;"><div class="port" title="可连接到视频首帧"></div></div>`;
                 } else if (type === 'res-video') {
-                    // 新增：视频产物展示节点
                     html = `<div class="node-header" style="background:#fff; color:#333; border-bottom:1px solid #eee;"><span>🎞️ 视频产物</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
                         <div class="node-content" style="background:transparent;">
                             <video src="${extraData.url}" class="media-preview" controls autoplay loop muted style="width:100%; border-radius:6px; background:#000;"></video>
@@ -414,7 +415,7 @@
                 
                 const btn = document.getElementById(`btn_${nodeId}`);
                 const originalText = btn.innerHTML;
-                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 生产中...`; 
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> API 请求中...`; 
                 btn.disabled = true;
                 
                 const srcNode = document.getElementById(nodeId);
@@ -428,7 +429,10 @@
                         const size = document.getElementById(`size_${nodeId}`).value.trim();
                         if(!prompt) throw new Error("提示词不能为空！");
                         
-                        const payload = { model: model, prompt: prompt, n: 1, size: size };
+                        const payload = { model: model, prompt: prompt, n: 1 };
+                        // 只有当尺寸栏不为空时，才带上 size 字段，完全交给模型去解析
+                        if (size) payload.size = size;
+                        
                         const res = await fetch(`${url}/images/generations`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
@@ -436,33 +440,45 @@
                         });
                         
                         const data = await res.json();
-                        if(data.data && data.data[0].url) {
+                        if(res.ok && data.data && data.data[0].url) {
                             buildNode('res-img', spawnX, spawnY, { url: data.data[0].url });
                         } else {
                             throw new Error(data.error ? data.error.message : JSON.stringify(data));
                         }
                     } else if (type === 'video') {
-                        const ref = document.getElementById(`ref_${nodeId}`).value;
-                        const prompt = document.getElementById(`val_${nodeId}`).value;
-                        const size = document.getElementById(`size_${nodeId}`).value;
-                        if(!ref) throw new Error("⚠️ 必须先连线一张独立图片作为首帧！");
+                        const model = document.getElementById(`model_${nodeId}`).value.trim();
+                        const prompt = document.getElementById(`val_${nodeId}`).value.trim();
+                        const size = document.getElementById(`size_${nodeId}`).value.trim();
+                        const refImg = document.getElementById(`ref_${nodeId}`).value.trim();
+                        
+                        if(!refImg && !prompt) throw new Error("⚠️ 图片或提示词至少需要提供一项！");
 
-                        // **********************************************
-                        // 提醒：视频 API 的标准并不像图片 API (dall-e) 那么统一。
-                        // 这里我们使用一个 setTimeout 模拟真实请求等待过程。
-                        // 如果你的中转服务器有标准的视频接口，你需要在这里替换成类似图像生成的 fetch 请求！
-                        // **********************************************
+                        const payload = { model: model };
+                        if (prompt) payload.prompt = prompt;
+                        if (size) payload.size = size;
+                        // 真实的参数打包：将前端接入的参考图作为 image_url 参数传递给服务端
+                        if (refImg) payload.image_url = refImg;
                         
-                        await new Promise(resolve => setTimeout(resolve, 2000)); // 模拟等待2秒
+                        // 硬核修复：抛弃假数据，执行真正的 fetch 调用，默认使用主流中转平台的 /videos/generations 标准端点
+                        const res = await fetch(`${url}/videos/generations`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                            body: JSON.stringify(payload)
+                        });
                         
-                        // 模拟返回一个开源的测试视频
-                        const mockVideoUrl = "https://media.w3.org/2010/05/sintel/trailer.mp4"; 
-                        
-                        // 生成“视频产物”节点展示在画布上
-                        buildNode('res-video', spawnX, spawnY, { url: mockVideoUrl });
+                        const data = await res.json();
+                        if (res.ok && data.data && data.data[0] && data.data[0].url) {
+                            buildNode('res-video', spawnX, spawnY, { url: data.data[0].url });
+                        } else if (res.ok && data.url) {
+                            // 兼容直接返回 { url: "..." } 的格式
+                            buildNode('res-video', spawnX, spawnY, { url: data.url });
+                        } else {
+                            // 打印真实 API 报错，而不是默默看假视频
+                            throw new Error(data.error ? data.error.message : JSON.stringify(data));
+                        }
                     }
                 } catch(e) { 
-                    alert("生产失败:\n" + e.message); 
+                    alert("⚠️ 生产接口返回错误:\n" + e.message); 
                 } finally { 
                     btn.innerHTML = originalText; btn.disabled = false; 
                 }
@@ -489,13 +505,18 @@
                         body: JSON.stringify({ model: model, messages: chatMem })
                     });
                     const data = await res.json();
-                    const aiText = data.choices[0].message.content;
-                    win.innerHTML += `<div class="msg ai"><div class="bubble">${aiText.replace(/\n/g, '<br>')}</div></div>`;
-                    chatMem.push({role: "assistant", content: aiText});
-                } catch(e) { win.innerHTML += `<div class="msg ai"><div class="bubble">❌ ${e.message}</div></div>`; }
+                    if(res.ok) {
+                        const aiText = data.choices[0].message.content;
+                        win.innerHTML += `<div class="msg ai"><div class="bubble">${aiText.replace(/\n/g, '<br>')}</div></div>`;
+                        chatMem.push({role: "assistant", content: aiText});
+                    } else {
+                        throw new Error(data.error ? data.error.message : JSON.stringify(data));
+                    }
+                } catch(e) { win.innerHTML += `<div class="msg ai"><div class="bubble" style="color:#d63031;">❌ 接口错误: ${e.message}</div></div>`; }
                 win.scrollTop = win.scrollHeight;
             };
 
+            // 预加载两个空节点方便你测试
             setTimeout(() => {
                 buildNode('text', 200, 150);
                 buildNode('t2i', 550, 150);
