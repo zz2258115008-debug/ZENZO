@@ -3,154 +3,248 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI 全能节点画布 - 稳定分离版</title>
-    <link rel="stylesheet" href="https://unpkg.com/tldraw@3/tldraw.css" />
+    <title>AI 漫剧终极工作站 (全模态无限画布)</title>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; height: 100vh; width: 100vw; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; }
-        #my-canvas { position: fixed; inset: 0; z-index: 1; }
-        #sidebar { position: absolute; top: 20px; left: 20px; bottom: 20px; width: 320px; background: rgba(30, 30, 30, 0.9); backdrop-filter: blur(10px); z-index: 999; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header h2 { margin: 0 0 15px 0; font-size: 18px; color: #fff; display: flex; align-items: center; gap: 8px;}
-        .api-setup input { width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 12px; }
-        .tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .tab-btn { flex: 1 1 33%; background: none; border: none; color: #aaa; padding: 12px 0; font-size: 13px; cursor: pointer; transition: 0.3s; }
-        .tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
-        .tab-btn.active { color: #0070f3; font-weight: bold; border-bottom: 2px solid #0070f3; background: rgba(0, 112, 243, 0.1); }
-        .workspace { padding: 20px; flex-grow: 1; overflow-y: auto; display: none; }
-        .workspace.active { display: block; }
-        .workspace label { display: block; font-size: 12px; color: #aaa; margin-bottom: 5px; }
-        .workspace textarea, .workspace input { width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 15px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 14px; resize: vertical; }
-        .generate-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #0070f3, #8a2be2); border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 112, 243, 0.4); }
-        .generate-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .generate-btn:active { transform: translateY(1px); }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: #fff; user-select: none; }
+        
+        /* 无限画布容器 */
+        #viewport { width: 100vw; height: 100vh; position: absolute; overflow: hidden; cursor: grab; }
+        #canvas { position: absolute; top: 0; left: 0; width: 0; height: 0; transform-origin: 0 0; }
+        
+        /* 画布上的节点卡片样式 */
+        .node-card { position: absolute; background: rgba(40,40,40,0.95); border: 1px solid #444; border-radius: 12px; padding: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); cursor: pointer; min-width: 200px; max-width: 350px; backdrop-filter: blur(10px); }
+        .node-card.text-node { border-top: 4px solid #0070f3; }
+        .node-card.image-node { border-top: 4px solid #10b981; }
+        .node-card.video-node { border-top: 4px solid #8b5cf6; }
+        .node-card img, .node-card video { width: 100%; border-radius: 8px; margin-top: 10px; }
+        
+        /* 左侧多模态控制台 */
+        #sidebar { position: absolute; top: 20px; left: 20px; bottom: 20px; width: 340px; background: rgba(25, 25, 25, 0.95); border: 1px solid #333; border-radius: 16px; display: flex; flex-direction: column; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); backdrop-filter: blur(20px); cursor: default; }
+        .header { padding: 15px; border-bottom: 1px solid #333; }
+        .header input { width: 100%; box-sizing: border-box; padding: 8px; margin-top: 5px; background: #111; border: 1px solid #444; color: #fff; border-radius: 6px; }
+        
+        .tabs { display: flex; flex-wrap: wrap; background: #222; }
+        .tab-btn { flex: 1 1 33%; padding: 10px 0; background: none; border: none; color: #888; font-size: 13px; cursor: pointer; transition: 0.2s; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: #fff; border-bottom: 2px solid #0070f3; font-weight: bold; background: #2a2a2a; }
+        
+        .workspace { flex-grow: 1; padding: 15px; overflow-y: auto; display: none; flex-direction: column; gap: 10px; }
+        .workspace.active { display: flex; }
+        .workspace label { font-size: 12px; color: #aaa; }
+        .workspace textarea, .workspace input[type="text"] { width: 100%; box-sizing: border-box; padding: 10px; background: #111; border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 13px; resize: vertical; }
+        
+        .run-btn { padding: 12px; background: linear-gradient(135deg, #0070f3, #8a2be2); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .run-btn:hover { opacity: 0.9; }
+        .run-btn.img-btn { background: linear-gradient(135deg, #10b981, #059669); }
+        .run-btn.vid-btn { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+        
+        /* 顶部提示 */
+        .tips { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 8px 16px; border-radius: 20px; font-size: 13px; color: #aaa; z-index: 100; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <div id="sidebar">
-        <div class="sidebar-header">
-            <h2>⚙️ 全局 API 配置</h2>
-            <div class="api-setup">
-                <input id="globalApiUrl" type="text" placeholder="全局接口地址 (如 https://api.xxx.com/v1)" />
-                <input id="globalApiKey" type="password" placeholder="填写你的 API Key" />
+    <div class="tips">🖱️ 鼠标左键拖拽可平移画布，滚轮可缩放</div>
+
+    <div id="viewport">
+        <div id="canvas">
             </div>
+    </div>
+
+    <div id="sidebar" onmousedown="event.stopPropagation()">
+        <div class="header">
+            <h3 style="margin: 0 0 10px 0; font-size: 16px;">🔑 全局 API 设置</h3>
+            <input id="apiUrl" type="text" value="https://nexusapi.cn/v1" placeholder="API 地址" />
+            <input id="apiKey" type="password" placeholder="填写 API Key" />
         </div>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('chat')">💬 AI对话</button>
-            <button class="tab-btn" onclick="switchTab('t2i')">🎨 文生图</button>
+            <button class="tab-btn active" onclick="switchTab('chat')">💬 对话</button>
+            <button class="tab-btn" onclick="switchTab('image')">🎨 生图</button>
+            <button class="tab-btn" onclick="switchTab('video')">🎬 生视频</button>
         </div>
 
         <div id="tab-chat" class="workspace active">
-            <label>模型名称</label>
-            <input id="chatModel" type="text" value="gpt-4o" />
-            <label>你想聊点什么？</label>
-            <textarea id="chatPrompt" rows="4" placeholder="例如：帮我写一段山海经异兽出场的旁白..."></textarea>
-            <button id="btn-chat" class="generate-btn" onclick="sendChatRequest()">发送并生成文本卡片</button>
+            <label>你想聊什么？</label>
+            <textarea id="chatPrompt" rows="4" placeholder="例如：设计一个九尾狐的背景故事..."></textarea>
+            <button class="run-btn" onclick="generateText()">发送并生成文本节点</button>
         </div>
 
-        <div id="tab-t2i" class="workspace"><button class="generate-btn" onclick="alert('即将打通本地显卡')">暂未打通</button></div>
+        <div id="tab-image" class="workspace">
+            <label>模式选择</label>
+            <select style="padding: 8px; background: #111; color: white; border: 1px solid #444; border-radius: 6px;">
+                <option>📝 文生图 (Text to Image)</option>
+                <option>🖼️ 图生图 (Image to Image)</option>
+            </select>
+            <label>参考图链接 (图生图需填)</label>
+            <input type="text" placeholder="https://..." />
+            <label>画面提示词 (Prompt)</label>
+            <textarea rows="4" placeholder="例如：水墨画，一只巨大的九尾狐站在山巅..."></textarea>
+            <button class="run-btn img-btn" onclick="mockGenerateImage()">🎨 生成图像节点</button>
+        </div>
+
+        <div id="tab-video" class="workspace">
+            <label>模式选择</label>
+            <select style="padding: 8px; background: #111; color: white; border: 1px solid #444; border-radius: 6px;">
+                <option>📝 文生视频 (Text to Video)</option>
+                <option>🖼️ 图生视频 (Image to Video)</option>
+                <option>🎬 视频生视频 (Video to Video)</option>
+            </select>
+            <label>参考文件链接 (图片或视频)</label>
+            <input type="text" placeholder="https://..." />
+            <label>运镜/动态提示词</label>
+            <textarea rows="3" placeholder="例如：镜头缓慢拉近，九尾狐的尾巴随风飘动..."></textarea>
+            <button class="run-btn vid-btn" onclick="mockGenerateVideo()">🎬 生成视频节点</button>
+        </div>
     </div>
-    
-    <div id="my-canvas"></div>
 
     <script>
-        // UI 切换
-        window.switchTab = function(tabId) {
+        /* =======================================
+           第一部分：UI 切换逻辑
+        ======================================= */
+        function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.workspace').forEach(ws => ws.classList.remove('active'));
             event.target.classList.add('active');
             document.getElementById('tab-' + tabId).classList.add('active');
-        };
+        }
 
-        // 全局变量，存放画布方向盘
-        window.myEditor = null;
+        /* =======================================
+           第二部分：纯手工无限画布引擎 (核心科技)
+        ======================================= */
+        const viewport = document.getElementById('viewport');
+        const canvas = document.getElementById('canvas');
+        let scale = 1, panX = 0, panY = 0, isPanning = false, startX, startY;
 
-        // 按钮点击核心函数
-        window.sendChatRequest = async function() {
-            const btn = document.getElementById('btn-chat');
-            let rawUrl = document.getElementById('globalApiUrl').value.trim();
-            const key = document.getElementById('globalApiKey').value.trim();
-            const prompt = document.getElementById('chatPrompt').value.trim();
-            const model = document.getElementById('chatModel').value.trim();
+        // 鼠标按下：开始拖拽平移
+        viewport.addEventListener('mousedown', (e) => {
+            if(e.target.closest('.node-card')) return; // 如果点到了卡片，不平移画布
+            isPanning = true;
+            viewport.style.cursor = 'grabbing';
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
+        });
+
+        // 鼠标移动：更新平移坐标
+        window.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            panX = e.clientX - startX;
+            panY = e.clientY - startY;
+            canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+        });
+
+        // 鼠标松开：停止拖拽
+        window.addEventListener('mouseup', () => {
+            isPanning = false;
+            viewport.style.cursor = 'grab';
+        });
+
+        // 滚轮滚动：无限缩放
+        viewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomAmount = e.deltaY * -0.001;
+            const newScale = Math.min(Math.max(0.1, scale + zoomAmount), 5); // 限制缩放比例在 0.1 到 5 倍之间
             
-            if(!rawUrl || !key) { alert("⚠️ 必须填写 API 接口地址和 Key！"); return; }
-            if(!prompt) { alert("⚠️ 请输入你想聊的内容！"); return; }
+            // 以鼠标为中心缩放的数学计算
+            const mouseX = e.clientX - panX;
+            const mouseY = e.clientY - panY;
+            panX -= mouseX * (newScale / scale - 1);
+            panY -= mouseY * (newScale / scale - 1);
+            scale = newScale;
+            
+            canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+        });
 
-            // 智能修复网址格式 (自动补全 /v1)
-            if (!rawUrl.endsWith('/v1') && !rawUrl.includes('/v1/')) {
-                rawUrl = rawUrl.replace(/\/$/, '') + '/v1';
-            }
-            let finalUrl = rawUrl.endsWith('/chat/completions') ? rawUrl : rawUrl + '/chat/completions';
+        // 生成卡片的通用函数
+        function addNodeToCanvas(htmlContent, typeClass) {
+            const node = document.createElement('div');
+            node.className = `node-card ${typeClass}`;
+            node.innerHTML = htmlContent;
+            
+            // 将卡片放置在当前视口的中心
+            const centerX = (-panX + window.innerWidth / 2) / scale - 150;
+            const centerY = (-panY + window.innerHeight / 2) / scale - 100;
+            node.style.left = `${centerX}px`;
+            node.style.top = `${centerY}px`;
+            
+            // 允许卡片本身被拖拽
+            let isDragging = false, nStartX, nStartY, nInitX, nInitY;
+            node.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                isDragging = true;
+                nStartX = e.clientX; nStartY = e.clientY;
+                nInitX = parseFloat(node.style.left); nInitY = parseFloat(node.style.top);
+            });
+            window.addEventListener('mousemove', (e) => {
+                if(!isDragging) return;
+                node.style.left = `${nInitX + (e.clientX - nStartX) / scale}px`;
+                node.style.top = `${nInitY + (e.clientY - nStartY) / scale}px`;
+            });
+            window.addEventListener('mouseup', () => isDragging = false);
 
-            const originalText = btn.innerText;
-            btn.innerText = "⏳ 呼叫 AI 中...";
-            btn.style.opacity = "0.7";
+            canvas.appendChild(node);
+        }
+
+        /* =======================================
+           第三部分：多模态 API 调用逻辑
+        ======================================= */
+        
+        // 1. 生成文本节点 (真实调用 API)
+        async function generateText() {
+            const url = document.getElementById('apiUrl').value.trim();
+            const key = document.getElementById('apiKey').value.trim();
+            const prompt = document.getElementById('chatPrompt').value.trim();
+            if(!url || !key || !prompt) { alert("⚠️ 请填全 API 地址、Key 和提示词"); return; }
+
+            const finalUrl = url.endsWith('/chat/completions') ? url : url + '/chat/completions';
+            const btn = event.target;
+            const oldText = btn.innerText;
+            btn.innerText = "⏳ 思考中..."; btn.style.opacity = "0.6";
 
             try {
                 const response = await fetch(finalUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-                    body: JSON.stringify({ model: model, messages: [{"role": "user", "content": prompt}] })
+                    body: JSON.stringify({ model: 'gpt-4o', messages: [{"role": "user", "content": prompt}] })
                 });
-                
-                if(!response.ok) {
-                    const err = await response.text();
-                    throw new Error(`服务器拒绝 (${response.status})\n这通常是因为 Key 填错、网址填错或余额不足。\n详细错误：${err}`);
-                }
-
                 const data = await response.json();
-                
-                if(data.choices && data.choices[0].message) {
-                    const resultText = data.choices[0].message.content;
-                    
-                    // 检查画布是否成功加载
-                    if (window.myEditor) {
-                        const bounds = window.myEditor.getViewportPageBounds();
-                        const centerX = bounds.x + bounds.w / 2;
-                        const centerY = bounds.y + bounds.h / 2;
+                if(data.choices) {
+                    // 把文字添加到画布上
+                    addNodeToCanvas(`
+                        <h4 style="margin:0 0 10px 0; color:#0070f3;">📝 AI 对话回复</h4>
+                        <div style="font-size:13px; line-height:1.5;">${data.choices[0].message.content.replace(/\n/g, '<br>')}</div>
+                    `, 'text-node');
+                    document.getElementById('chatPrompt').value = '';
+                } else { throw new Error("API 错误"); }
+            } catch(e) { alert("❌ 生成失败：" + e.message); } 
+            finally { btn.innerText = oldText; btn.style.opacity = "1"; }
+        }
 
-                        window.myEditor.createShapes([{
-                            id: 'shape:' + Date.now(),
-                            type: 'note', 
-                            x: centerX,
-                            y: centerY,
-                            props: { text: resultText, color: 'blue', size: 'm' }
-                        }]);
-                        alert("✅ 卡片已成功生成在画布上！");
-                    } else {
-                        // 如果画布崩溃了，至少保证你能看到文字
-                        alert("✅ AI 回复成功（但画板未加载，结果直接弹窗显示）：\n\n" + resultText);
-                    }
-                } else { throw new Error("API 返回了无法解析的数据格式"); }
-            } catch (error) {
-                alert("❌ 请求彻底失败：\n" + error.message);
-            } finally {
-                btn.innerText = originalText;
-                btn.style.opacity = "1";
-            }
-        };
-    </script>
+        // 2. 生成图像节点 (模拟演示，后续接 ComfyUI/Midjourney)
+        function mockGenerateImage() {
+            const btn = event.target;
+            btn.innerText = "⏳ 显卡绘制中...";
+            setTimeout(() => {
+                addNodeToCanvas(`
+                    <h4 style="margin:0 0 10px 0; color:#10b981;">🎨 图像生成结果</h4>
+                    <div style="font-size:12px; color:#aaa;">提示词：水墨画，山海经风格...</div>
+                    <img src="https://images.unsplash.com/photo-1618331835717-801e976710b2?auto=format&fit=crop&w=600&q=80" alt="生成的水墨画" draggable="false" />
+                `, 'image-node');
+                btn.innerText = "🎨 生成图像节点";
+            }, 1500);
+        }
 
-    <script type="module">
-        import React from 'https://esm.sh/react@18.2.0';
-        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-        import { Tldraw } from 'https://esm.sh/tldraw@3.3.0?external=react,react-dom';
-
-        try {
-            const App = () => {
-                return React.createElement(Tldraw, {
-                    onMount: (editor) => {
-                        window.myEditor = editor;
-                        console.log("画板加载成功！");
-                    }
-                })
-            };
-            const root = createRoot(document.getElementById('my-canvas'));
-            root.render(React.createElement(App));
-        } catch (err) {
-            console.error("画板引擎加载失败:", err);
-            // 这里不会影响上面的按钮使用了
+        // 3. 生成视频节点 (模拟演示，后续接 Runway/Kling)
+        function mockGenerateVideo() {
+            const btn = event.target;
+            btn.innerText = "⏳ 视频渲染中...";
+            setTimeout(() => {
+                addNodeToCanvas(`
+                    <h4 style="margin:0 0 10px 0; color:#8b5cf6;">🎬 视频生成结果</h4>
+                    <div style="font-size:12px; color:#aaa;">运镜：缓慢推进，水波荡漾...</div>
+                    <video src="https://www.w3schools.com/html/mov_bbb.mp4" controls autoplay loop style="width:100%; border-radius:8px; margin-top:10px;"></video>
+                `, 'video-node');
+                btn.innerText = "🎬 生成视频节点";
+            }, 2000);
         }
     </script>
 </body>
