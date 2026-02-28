@@ -41,7 +41,7 @@
         @keyframes dash { to { stroke-dashoffset: -12; } }
 
         /* ================= 2. 左侧悬浮工具栏 ================= */
-        #toolbar { position: absolute; left: 10px; top: 20px; width: 44px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-radius: 22px; box-shadow: var(--shadow-paper); display: flex; flex-direction: column; align-items: center; padding: 15px 0; z-index: 100; gap: 15px; border: 1px solid #fff;}
+        #toolbar { position: absolute; left: 10px; top: 20px; width: 44px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-radius: 22px; box-shadow: var(--shadow-paper); display: flex; flex-direction: column; align-items: center; padding: 15px 0; z-index: 100; border: 1px solid #fff;}
         .tool-btn { width: 32px; height: 32px; border-radius: 10px; border: none; background: transparent; color: var(--text-sub); font-size: 14px; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
         .tool-btn:hover { background: var(--bg-paper); color: var(--m-blue-dark); }
         .tool-btn.active { background: var(--m-blue); color: #fff; }
@@ -104,7 +104,7 @@
         .node-result { margin-top: 5px; position: relative; display: none; }
         .node-result img { width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block; }
         
-        /* 衍生引用按钮 (复刻图二) */
+        /* 衍生引用按钮 */
         .derive-btn { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; backdrop-filter: blur(4px); transition: 0.2s; display: flex; align-items: center; gap: 4px;}
         .derive-btn:hover { background: var(--m-blue-dark); }
 
@@ -141,7 +141,7 @@
         
         <div id="panel-chat" class="panel-content active">
             <div id="chat-window">
-                <div class="msg ai"><div class="bubble">双击左侧画布空白处即可添加节点。<br>生成图片后，点击右下角的「✨引用」可以向下延伸工作流哦。</div></div>
+                <div class="msg ai"><div class="bubble">工作流引擎组装完毕！<br><br>💡 <b>试试这样操作：</b><br>1. <b>双击画布空白处</b>添加节点。<br>2. 生成图片后，点击卡片右下角的<b>「✨引用」</b>。<br>3. 试试把不同节点两边的<b>彩色圆点连在一起</b>！</div></div>
             </div>
             <div class="chat-input-box">
                 <input id="chatModel" type="text" value="gpt-4o" style="padding:4px 8px; border:1px solid #eee; border-radius:4px; font-size:11px; width:80px; outline:none;" />
@@ -182,6 +182,12 @@
     </div>
 
     <script>
+        // ================= 修复丢失的全局 DOM 变量 =================
+        const viewport = document.getElementById('viewport');
+        const canvas = document.getElementById('canvas');
+        const svgLayer = document.getElementById('svg-layer');
+        const nodesContainer = document.getElementById('nodes-container');
+
         // ================= UI 切换与菜单逻辑 =================
         function switchRightPanel(tab) {
             document.querySelectorAll('.panel-tab').forEach(el => el.classList.remove('active'));
@@ -191,7 +197,7 @@
         }
 
         let clickX = 0, clickY = 0;
-        let sourceNodeForDerive = null; // 记录是从哪个节点点开衍生菜单的
+        let sourceNodeForDerive = null;
 
         function hideMenus() {
             document.getElementById('add-menu').style.display = 'none';
@@ -202,9 +208,11 @@
             if(!e.target.closest('.context-menu') && !e.target.closest('.derive-btn')) hideMenus();
         });
 
-        // 满足要求4：双击画布添加节点
+        // 修复：双击事件终于可以完美响应了
         viewport.addEventListener('dblclick', (e) => {
             if(e.target.closest('.node')) return; 
+            
+            // 精确计算出在缩放和拖拽后，画布内真实的相对坐标
             clickX = (e.clientX - 60 - panX) / scale;
             clickY = (e.clientY - panY) / scale;
             
@@ -214,7 +222,6 @@
             menu.style.display = 'block';
         });
 
-        // 满足要求3：点击图片上的按钮呼出衍生菜单
         window.openDeriveMenu = function(e, nodeId) {
             e.stopPropagation();
             sourceNodeForDerive = nodeId;
@@ -224,7 +231,6 @@
             menu.style.display = 'block';
         };
 
-        // 执行衍生逻辑：新建节点并自动物理连线
         window.deriveNode = function(targetType) {
             hideMenus();
             if(!sourceNodeForDerive) return;
@@ -233,23 +239,21 @@
             const srcX = parseFloat(srcNode.style.left);
             const srcY = parseFloat(srcNode.style.top);
             
-            // 在源节点右侧 320px 处生成新节点
+            // 在右侧生成新节点
             const newNodeId = addNode(targetType, srcX + 320, srcY);
             
-            // 自动建立物理连线！
+            // 自动连线并传递数据
             setTimeout(() => {
                 const srcOutPort = srcNode.querySelector('.port-out');
                 const targetInPort = document.getElementById(newNodeId).querySelector('.port-in');
                 if(srcOutPort && targetInPort) {
                     createPhysicalConnection(srcOutPort, targetInPort);
-                    // 连线后立刻触发数据流转
                     flowDataDownstream(sourceNodeForDerive);
                 }
             }, 50);
         };
 
         // ================= 画布漫游引擎 =================
-        const canvas = document.getElementById('canvas');
         let scale = 1, panX = 0, panY = 0, isPanning = false, startX, startY;
 
         viewport.addEventListener('mousedown', (e) => {
@@ -276,8 +280,7 @@
 
         function updateCanvas() { canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
 
-        // ================= 物理连线系统 (满足要求6) =================
-        const svgLayer = document.getElementById('svg-layer');
+        // ================= 物理连线系统 =================
         let connections = []; 
         let isWiring = false, tempWire = null, wiringStartPort = null;
 
@@ -299,7 +302,6 @@
             });
         }
 
-        // 手动连线交互
         window.addEventListener('mousedown', (e) => {
             const port = e.target.closest('.port-out');
             if (port) {
@@ -325,7 +327,6 @@
                 const endPort = e.target.closest('.port-in');
                 if (endPort && endPort.closest('.node').id !== wiringStartPort.closest('.node').id) {
                     createPhysicalConnection(wiringStartPort, endPort);
-                    // 连线成功后立刻流转数据
                     flowDataDownstream(wiringStartPort.closest('.node').id);
                 }
                 if (tempWire) tempWire.remove();
@@ -333,9 +334,7 @@
             }
         });
 
-        // 代码建立物理连接的方法
         function createPhysicalConnection(outPort, inPort) {
-            // 防止重复连接
             if(connections.find(c => c.fromPort === outPort && c.toPort === inPort)) return;
 
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -350,9 +349,8 @@
         }
 
         // ================= 节点工厂与工作流逻辑 =================
-        const nodesContainer = document.getElementById('nodes-container');
         let nodeIndex = 0;
-        const workflowData = {}; // 存放每个节点生成的结果
+        const workflowData = {}; 
 
         window.spawnNode = function(type) { hideMenus(); addNode(type, clickX, clickY); }
 
@@ -374,7 +372,6 @@
                 `;
             } 
             else if (type === 't2i') {
-                // 满足要求5：增加分辨率选择
                 html = `
                     <div class="node-header"><span>🎨 文生图</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
                     <div class="node-content">
@@ -418,7 +415,7 @@
 
             node.innerHTML = html;
             
-            // 节点拖拽逻辑
+            // 拖拽逻辑
             const header = node.querySelector('.node-header');
             let isDragging = false, nx, ny, ix, iy;
             header.addEventListener('mousedown', (e) => {
@@ -438,7 +435,7 @@
 
             nodesContainer.appendChild(node);
             
-            // 文本节点实时流转
+            // 文本节点输入流转
             if(type === 'text') {
                 document.getElementById(`val_${nodeId}`).addEventListener('input', (e) => {
                     workflowData[nodeId] = { type: 'text', value: e.target.value };
@@ -461,7 +458,7 @@
             connections = []; Object.keys(workflowData).forEach(k => delete workflowData[k]);
         }
 
-        // ================= 数据流转与 API 执行 =================
+        // ================= 数据流转与 API 调度 =================
         function flowDataDownstream(sourceNodeId) {
             const data = workflowData[sourceNodeId];
             if (!data) return;
@@ -469,7 +466,7 @@
             connections.forEach(conn => {
                 if (conn.fromNode === sourceNodeId) {
                     const targetId = conn.toNode;
-                    const portType = conn.targetInputType; // 'prompt' 或 'image'
+                    const portType = conn.targetInputType; 
                     
                     if (data.type === 'text' && portType === 'prompt') {
                         const el = document.getElementById(`val_${targetId}`);
@@ -511,7 +508,6 @@
                         document.getElementById(`img_${nodeId}`).src = imgUrl;
                         document.getElementById(`res_${nodeId}`).style.display = 'block';
                         
-                        // 写入内存并流转
                         workflowData[nodeId] = { type: 'image', value: imgUrl };
                         flowDataDownstream(nodeId);
                     } else throw new Error(JSON.stringify(data));
@@ -552,7 +548,6 @@
             } catch(e) { win.innerHTML += `<div class="msg ai"><div class="bubble">❌ ${e.message}</div></div>`; }
             win.scrollTop = win.scrollHeight;
         };
-
     </script>
 </body>
 </html>
