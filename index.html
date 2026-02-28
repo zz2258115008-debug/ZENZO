@@ -3,41 +3,96 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI 无限画布 - TapNow 演示版</title>
+    <title>我的全能 API 画布</title>
     <link rel="stylesheet" href="https://unpkg.com/tldraw@latest/tldraw.css" />
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; height: 100vh; width: 100vw; }
-        #my-canvas { position: fixed; inset: 0; }
-        #ai-tool-bar {
+        body { margin: 0; padding: 0; overflow: hidden; height: 100vh; width: 100vw; font-family: sans-serif; background: #f8f9fa; }
+        #my-canvas { position: fixed; inset: 0; z-index: 1; }
+        
+        /* 自定义控制面板样式 */
+        #api-panel {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 999; background: white; padding: 10px 20px;
-            border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            display: flex; gap: 10px; align-items: center;
+            z-index: 999; background: white; padding: 15px 20px;
+            border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            display: flex; gap: 10px; align-items: center; border: 1px solid #e5e7eb;
         }
-        button { cursor: pointer; border: none; background: #0070f3; color: white; padding: 8px 15px; border-radius: 5px; }
+        input, select { 
+            padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; 
+            outline: none; font-size: 14px;
+        }
+        input:focus { border-color: #0070f3; }
+        button { 
+            cursor: pointer; border: none; background: #171717; color: white; 
+            padding: 8px 16px; border-radius: 6px; font-weight: bold; transition: 0.2s;
+        }
+        button:hover { background: #383838; }
     </style>
 </head>
 <body>
-    <div id="ai-tool-bar">
-        <strong>TapNow 风格工具栏:</strong>
-        <button onclick="generateImage()">生成图片 API</button>
-        <button onclick="generateText()" style="background: #333;">文本 API</button>
+    <div id="api-panel">
+        <input id="apiUrl" type="text" placeholder="API 接口地址 (如 https://api.xxx.com/v1/chat/completions)" style="width: 250px;" />
+        <input id="apiKey" type="password" placeholder="输入你的 API Key" style="width: 150px;" />
+        <input id="modelName" type="text" placeholder="模型名 (如 gpt-4o)" style="width: 120px;" />
+        <input id="promptText" type="text" placeholder="输入你想生成的内容..." style="width: 200px;" />
+        <button onclick="callCustomAPI()" id="runBtn">🚀 发送请求</button>
     </div>
+    
     <div id="my-canvas"></div>
 
     <script type="module">
         import { Tldraw } from 'https://esm.sh/tldraw'
-        
-        // 初始化画布
-        const editor = new Tldraw({ 
-            container: document.getElementById('my-canvas'),
-            autofocus: true 
-        })
+        new Tldraw({ container: document.getElementById('my-canvas') })
 
-        // 定义 API 调用逻辑
-        window.generateImage = () => {
-            alert('正在连接你的自定义 API...');
-            // 这里可以放入你的本地 3060 显卡生成的 API 地址或者云端 API
+        // 核心：调用市场上通用 API 的逻辑
+        window.callCustomAPI = async () => {
+            const url = document.getElementById('apiUrl').value;
+            const key = document.getElementById('apiKey').value;
+            const model = document.getElementById('modelName').value;
+            const prompt = document.getElementById('promptText').value;
+            const btn = document.getElementById('runBtn');
+
+            // 检查是否漏填
+            if(!url || !key || !model || !prompt) {
+                alert("请填满所有输入框后再发送！");
+                return;
+            }
+
+            btn.innerText = "⏳ 模型思考中...";
+            btn.style.background = "#0070f3";
+
+            try {
+                // 组装市场上最通用的 OpenAI 兼容格式请求包
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + key
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [{"role": "user", "content": prompt}]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`服务器返回错误代码: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // 解析返回的文字结果
+                const resultText = data.choices[0].message.content;
+                
+                // 暂时用弹窗展示结果（后续我们再把它渲染成画布上的便签）
+                alert("🎉 生成成功：\n\n" + resultText);
+
+            } catch (error) {
+                alert("❌ 请求失败，请检查网址和 Key 是否正确。\n详细错误：" + error.message);
+            } finally {
+                // 恢复按钮状态
+                btn.innerText = "🚀 发送请求";
+                btn.style.background = "#171717";
+            }
         }
     </script>
 </body>
