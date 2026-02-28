@@ -3,53 +3,29 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI 全能节点画布 - 稳定版</title>
+    <title>AI 全能节点画布 - 稳定分离版</title>
     <link rel="stylesheet" href="https://unpkg.com/tldraw@3/tldraw.css" />
     <style>
         body { margin: 0; padding: 0; overflow: hidden; height: 100vh; width: 100vw; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; }
         #my-canvas { position: fixed; inset: 0; z-index: 1; }
-        
         #sidebar { position: absolute; top: 20px; left: 20px; bottom: 20px; width: 320px; background: rgba(30, 30, 30, 0.9); backdrop-filter: blur(10px); z-index: 999; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
         .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .sidebar-header h2 { margin: 0 0 15px 0; font-size: 18px; color: #fff; display: flex; align-items: center; gap: 8px;}
         .api-setup input { width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 12px; }
-
         .tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .tab-btn { flex: 1 1 33%; background: none; border: none; color: #aaa; padding: 12px 0; font-size: 13px; cursor: pointer; transition: 0.3s; }
         .tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
         .tab-btn.active { color: #0070f3; font-weight: bold; border-bottom: 2px solid #0070f3; background: rgba(0, 112, 243, 0.1); }
-
         .workspace { padding: 20px; flex-grow: 1; overflow-y: auto; display: none; }
         .workspace.active { display: block; }
         .workspace label { display: block; font-size: 12px; color: #aaa; margin-bottom: 5px; }
         .workspace textarea, .workspace input { width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 15px; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 14px; resize: vertical; }
-        
         .generate-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #0070f3, #8a2be2); border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 112, 243, 0.4); }
         .generate-btn:hover { opacity: 0.9; transform: translateY(-1px); }
         .generate-btn:active { transform: translateY(1px); }
-        
-        #loading-overlay { position: fixed; inset: 0; background: #121212; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; transition: opacity 0.5s; }
-        .loader { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #0070f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
-    
-    <script type="importmap">
-    {
-        "imports": {
-            "react": "https://esm.sh/react@18.2.0",
-            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-            "tldraw": "https://esm.sh/tldraw@3.3.0?external=react,react-dom"
-        }
-    }
-    </script>
 </head>
 <body>
-    
-    <div id="loading-overlay">
-        <div class="loader"></div>
-        <div id="loading-text">🚀 正在组装无限画布引擎，首次加载可能需要几秒...</div>
-        <button onclick="document.getElementById('loading-overlay').style.display='none'" style="margin-top: 25px; padding: 8px 16px; background: transparent; border: 1px solid #555; color: #aaa; border-radius: 6px; cursor: pointer;">强制进入画布</button>
-    </div>
 
     <div id="sidebar">
         <div class="sidebar-header">
@@ -63,7 +39,6 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('chat')">💬 AI对话</button>
             <button class="tab-btn" onclick="switchTab('t2i')">🎨 文生图</button>
-            <button class="tab-btn" onclick="switchTab('i2i')">🖼️ 图生图</button>
         </div>
 
         <div id="tab-chat" class="workspace active">
@@ -71,66 +46,42 @@
             <input id="chatModel" type="text" value="gpt-4o" />
             <label>你想聊点什么？</label>
             <textarea id="chatPrompt" rows="4" placeholder="例如：帮我写一段山海经异兽出场的旁白..."></textarea>
-            <button id="btn-chat" class="generate-btn">发送并生成文本卡片</button>
+            <button id="btn-chat" class="generate-btn" onclick="sendChatRequest()">发送并生成文本卡片</button>
         </div>
 
-        <div id="tab-t2i" class="workspace"><button class="generate-btn" onclick="alert('暂未打通')">暂未打通</button></div>
-        <div id="tab-i2i" class="workspace"><button class="generate-btn" onclick="alert('暂未打通')">暂未打通</button></div>
+        <div id="tab-t2i" class="workspace"><button class="generate-btn" onclick="alert('即将打通本地显卡')">暂未打通</button></div>
     </div>
     
     <div id="my-canvas"></div>
 
     <script>
+        // UI 切换
         window.switchTab = function(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.workspace').forEach(ws => ws.classList.remove('active'));
             event.target.classList.add('active');
             document.getElementById('tab-' + tabId).classList.add('active');
         };
-    </script>
 
-    <script type="module">
-        // 关键修复点：使用 * as React，保证在各种浏览器环境都不会崩溃
-        import * as React from 'react';
-        import { createRoot } from 'react-dom/client';
-        import { Tldraw, createShapeId } from 'tldraw';
-
+        // 全局变量，存放画布方向盘
         window.myEditor = null;
 
-        const App = () => {
-            return React.createElement(Tldraw, {
-                onMount: (editor) => {
-                    window.myEditor = editor;
-                    document.getElementById('loading-overlay').style.display = 'none';
-                }
-            })
-        };
-
-        try {
-            const root = createRoot(document.getElementById('my-canvas'));
-            root.render(React.createElement(App));
-        } catch (err) {
-            console.error("React 渲染报错:", err);
-            document.getElementById('loading-text').innerText = "⚠️ 引擎加载似乎遇到点阻碍，你可以直接点击下方按钮强制进入！";
-        }
-
-        document.getElementById('btn-chat').addEventListener('click', async (e) => {
-            if (!window.myEditor) {
-                alert("⚠️ 画布引擎还没完全启动，或者你使用了强制进入（可能无法生成卡片）。");
-                return;
-            }
-
-            const btn = e.target;
+        // 按钮点击核心函数
+        window.sendChatRequest = async function() {
+            const btn = document.getElementById('btn-chat');
             let rawUrl = document.getElementById('globalApiUrl').value.trim();
             const key = document.getElementById('globalApiKey').value.trim();
             const prompt = document.getElementById('chatPrompt').value.trim();
             const model = document.getElementById('chatModel').value.trim();
             
-            if(!rawUrl || !key) { alert("⚠️ 兄弟，先把顶部的 API 接口地址和 Key 填上！"); return; }
-            if(!prompt) { alert("⚠️ 你什么都没写，AI 不知道该干嘛！"); return; }
+            if(!rawUrl || !key) { alert("⚠️ 必须填写 API 接口地址和 Key！"); return; }
+            if(!prompt) { alert("⚠️ 请输入你想聊的内容！"); return; }
 
-            let cleanUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
-            let finalUrl = cleanUrl.endsWith('/chat/completions') ? cleanUrl : cleanUrl + '/chat/completions';
+            // 智能修复网址格式 (自动补全 /v1)
+            if (!rawUrl.endsWith('/v1') && !rawUrl.includes('/v1/')) {
+                rawUrl = rawUrl.replace(/\/$/, '') + '/v1';
+            }
+            let finalUrl = rawUrl.endsWith('/chat/completions') ? rawUrl : rawUrl + '/chat/completions';
 
             const originalText = btn.innerText;
             btn.innerText = "⏳ 呼叫 AI 中...";
@@ -145,7 +96,7 @@
                 
                 if(!response.ok) {
                     const err = await response.text();
-                    throw new Error(`请求被拒绝 (${response.status})\n详细原因：${err}`);
+                    throw new Error(`服务器拒绝 (${response.status})\n这通常是因为 Key 填错、网址填错或余额不足。\n详细错误：${err}`);
                 }
 
                 const data = await response.json();
@@ -153,26 +104,54 @@
                 if(data.choices && data.choices[0].message) {
                     const resultText = data.choices[0].message.content;
                     
-                    const bounds = window.myEditor.getViewportPageBounds();
-                    const centerX = bounds.x + bounds.w / 2;
-                    const centerY = bounds.y + bounds.h / 2;
+                    // 检查画布是否成功加载
+                    if (window.myEditor) {
+                        const bounds = window.myEditor.getViewportPageBounds();
+                        const centerX = bounds.x + bounds.w / 2;
+                        const centerY = bounds.y + bounds.h / 2;
 
-                    // 召唤便利贴！
-                    window.myEditor.createShapes([{
-                        id: createShapeId(),
-                        type: 'note', 
-                        x: centerX,
-                        y: centerY,
-                        props: { text: resultText, color: 'blue', size: 'm' }
-                    }]);
+                        window.myEditor.createShapes([{
+                            id: 'shape:' + Date.now(),
+                            type: 'note', 
+                            x: centerX,
+                            y: centerY,
+                            props: { text: resultText, color: 'blue', size: 'm' }
+                        }]);
+                        alert("✅ 卡片已成功生成在画布上！");
+                    } else {
+                        // 如果画布崩溃了，至少保证你能看到文字
+                        alert("✅ AI 回复成功（但画板未加载，结果直接弹窗显示）：\n\n" + resultText);
+                    }
                 } else { throw new Error("API 返回了无法解析的数据格式"); }
             } catch (error) {
-                alert("❌ 请求失败：\n" + error.message);
+                alert("❌ 请求彻底失败：\n" + error.message);
             } finally {
                 btn.innerText = originalText;
                 btn.style.opacity = "1";
             }
-        });
+        };
+    </script>
+
+    <script type="module">
+        import React from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        import { Tldraw } from 'https://esm.sh/tldraw@3.3.0?external=react,react-dom';
+
+        try {
+            const App = () => {
+                return React.createElement(Tldraw, {
+                    onMount: (editor) => {
+                        window.myEditor = editor;
+                        console.log("画板加载成功！");
+                    }
+                })
+            };
+            const root = createRoot(document.getElementById('my-canvas'));
+            root.render(React.createElement(App));
+        } catch (err) {
+            console.error("画板引擎加载失败:", err);
+            // 这里不会影响上面的按钮使用了
+        }
     </script>
 </body>
 </html>
