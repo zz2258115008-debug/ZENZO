@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI 无限画布 - TapNow 演示版</title>
+    <link rel="stylesheet" href="https://unpkg.com/tldraw@latest/tldraw.css" />
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; height: 100vh; width: 100vw; }
+        #my-canvas { position: fixed; inset: 0; }
+        #ai-tool-bar {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 999; background: white; padding: 10px 20px;
+            border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            display: flex; gap: 10px; align-items: center;
+        }
+        button { cursor: pointer; border: none; background: #0070f3; color: white; padding: 8px 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div id="ai-tool-bar">
+        <strong>TapNow 风格工具栏:</strong>
+        <button onclick="generateImage()">生成图片 API</button>
+        <button onclick="generateText()" style="background: #333;">文本 API</button>
+    </div>
+    <div id="my-canvas"></div>
+
+    <script type="module">
+        import { Tldraw } from 'https://esm.sh/tldraw'
+        
+        // 初始化画布
+        const editor = new Tldraw({ 
+            container: document.getElementById('my-canvas'),
+            autofocus: true 
+        })
+
+        // 定义 API 调用逻辑
+        window.generateImage = () => {
+            alert('正在连接你的自定义 API...');
+            // 这里可以放入你的本地 3060 显卡生成的 API 地址或者云端 API
+        }
+    </script>
+</body>
+</html>
