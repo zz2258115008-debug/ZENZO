@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI 漫剧工作站 - 完美修复版</title>
+    <title>AI 漫剧工作站 - 万能模型调用版</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -16,46 +16,37 @@
             --text-main: #4a4a4a; --text-sub: #888;
             --border-soft: #f0f0f0; --wire-color: #b0bec5;
         }
-
         body { margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text-main); user-select: none; }
-        
         #viewport { position: absolute; left: 60px; right: 320px; top: 0; bottom: 0; overflow: hidden; cursor: grab; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); background-color: var(--bg-paper); }
         .bg-grid { background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 30px 30px; }
         .bg-dot { background-image: radial-gradient(circle at 1px 1px, var(--grid-line) 2px, transparent 0); background-size: 30px 30px; }
         .bg-pure { background-image: none; }
         .bg-dark { --bg-color: #1a1a1a; --grid-line: #333; color: #eee; background-color: var(--bg-color); }
         .bg-dark .bg-grid { background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); }
-
-        #canvas { position: absolute; width: 20000px; height: 20000px; left: -10000px; top: -10000px; transform-origin: 10000px 10000px; }
+        #canvas { position: absolute; width: 5000px; height: 5000px; left: 0; top: 0; transform-origin: 0 0; }
         #svg-layer { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: visible;}
-        
         .wire { fill: none; stroke: var(--wire-color); stroke-width: 4; stroke-linecap: round; transition: stroke 0.3s; }
         .wire.connected { stroke: #6c5ce7; stroke-width: 5; }
         .wire.active-flow { stroke: #00b894; stroke-dasharray: 10 10; animation: flowData 0.6s linear infinite; }
         @keyframes flowData { to { stroke-dashoffset: -20; } }
         .wire.temp { stroke-dasharray: 8 8; animation: dash 0.5s linear infinite; stroke: #0984e3;}
         @keyframes dash { to { stroke-dashoffset: -16; } }
-
         #toolbar { position: absolute; left: 10px; top: 20px; width: 44px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); display: flex; flex-direction: column; align-items: center; padding: 15px 0; z-index: 100; gap: 12px; border: 1px solid #fff;}
         .tool-btn { width: 32px; height: 32px; border-radius: 10px; border: none; background: transparent; color: var(--text-sub); font-size: 14px; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
         .tool-btn:hover { background: #f0f4f8; color: #0984e3; }
-
         #right-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 320px; background: #fff; border-left: 1px solid var(--border-soft); box-shadow: -5px 0 20px rgba(0,0,0,0.03); display: flex; flex-direction: column; z-index: 100; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         #right-panel.collapsed { transform: translateX(100%); }
         #panel-toggle { position: absolute; left: -24px; top: 50%; transform: translateY(-50%); width: 24px; height: 48px; background: #fff; border: 1px solid var(--border-soft); border-right: none; border-radius: 12px 0 0 12px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: -2px 0 5px rgba(0,0,0,0.02); color: var(--text-sub); transition: 0.2s; }
         #panel-toggle:hover { color: #0984e3; background: #f8f9fa; }
-
         .panel-tabs { display: flex; border-bottom: 1px solid var(--border-soft); background: #fafafa; }
         .panel-tab { flex: 1; padding: 15px 0; text-align: center; font-size: 13px; color: var(--text-sub); cursor: pointer; font-weight: bold; transition: 0.2s;}
         .panel-tab.active { color: #6c5ce7; background: #fff; box-shadow: inset 0 -2px 0 #6c5ce7; }
         .panel-content { flex: 1; overflow-y: auto; display: none; flex-direction: column; }
         .panel-content.active { display: flex; }
-
         .settings-area { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .settings-area label { font-size: 12px; color: var(--text-sub); font-weight: bold; }
         .settings-area input, .settings-area select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; background: #fafafa; transition: 0.2s; }
         .settings-area input:focus, .settings-area select:focus { border-color: #6c5ce7; background: #fff; }
-
         #chat-window { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; background: #fafafa;}
         .msg { display: flex; width: 100%; }
         .msg.user { justify-content: flex-end; }
@@ -63,72 +54,55 @@
         .bubble { max-width: 85%; padding: 12px 16px; border-radius: 14px; font-size: 13px; line-height: 1.5; word-wrap: break-word; user-select: text; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .msg.user .bubble { background: #6c5ce7; color: #fff; border-bottom-right-radius: 4px; }
         .msg.ai .bubble { background: #fff; border: 1px solid #eee; border-bottom-left-radius: 4px; }
-        
         .chat-input-box { padding: 15px; background: #fff; border-top: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 8px; }
         .chat-input-box textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; resize: none; outline: none; font-family: inherit;}
         .send-btn { padding: 10px; background: #6c5ce7; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .send-btn:hover { background: #5b4bc4; }
-
         #nodes-container { position: absolute; width: 100%; height: 100%; z-index: 1; pointer-events: none;}
-        .node { position: absolute; border-radius: 8px; box-shadow: 2px 5px 15px rgba(0,0,0,0.06), 5px 10px 25px rgba(0,0,0,0.04); width: 260px; display: flex; flex-direction: column; transition: transform 0.1s; pointer-events: auto; }
-        .node::after { content: ""; position: absolute; bottom: 0; right: 0; width: 25px; height: 25px; background: linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(255,255,255,0.4) 100%); border-top-left-radius: 6px; pointer-events: none; }
-        .node.selected { border: 1px solid #6c5ce7; box-shadow: 0 8px 30px rgba(108,92,231,0.2); z-index: 10; }
-        
+        .node { position: absolute; border-radius: 8px; box-shadow: 2px 5px 15px rgba(0,0,0,0.06), 5px 10px 25px rgba(0,0,0,0.04); width: 260px; display: flex; flex-direction: column; transition: transform 0.1s; pointer-events: auto; border: 3px solid #ff69b4; }
         .node-header { padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; cursor: move; font-size: 14px; font-weight: bold; color: rgba(0,0,0,0.6); border-bottom: 1px solid rgba(0,0,0,0.05); }
         .node-header i { cursor: pointer; color: rgba(0,0,0,0.3); transition: 0.2s; }
         .node-header i:hover { color: #ff5252; }
-
         .node-content { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         .node-content label { font-size: 11px; color: var(--text-sub); margin-bottom: -6px; font-weight: bold;}
         .node-content input, .node-content textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; font-size: 12px; outline: none; background: rgba(255,255,255,0.5); color: #333; font-family: inherit; transition: 0.2s;}
         .node-content input:focus, .node-content textarea:focus { background: #fff; border-color: #6c5ce7; }
-        
         .run-node-btn { background: rgba(0,0,0,0.7); color: #fff; border: none; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 5px; }
         .run-node-btn:hover { background: #000; }
-
         .result-media { width: 100%; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block; background: #eee; min-height: 100px;}
         .action-row { display: flex; gap: 8px; margin-top: 10px; }
         .action-btn { flex: 1; padding: 8px; background: rgba(255,255,255,0.8); border: 1px solid rgba(0,0,0,0.05); border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; color: #444; transition: 0.2s; text-align: center; text-decoration: none; display: flex; justify-content: center; align-items: center; gap: 5px;}
         .action-btn:hover { background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transform: translateY(-1px); color: #6c5ce7;}
-
         .port-wrapper { position: absolute; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: crosshair; z-index: 20; border-radius: 50%; }
         .port { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid rgba(0,0,0,0.4); transition: 0.2s; pointer-events: none; }
         .port-wrapper:hover .port { transform: scale(1.5); border-color: #6c5ce7; box-shadow: 0 0 10px rgba(108,92,231,0.3);}
         .port-wrapper.magnet-active .port { transform: scale(1.8); border-color: #00b894; background: #e8f8f5; }
-        
         .port-in { left: -20px; }
         .port-out { right: -20px; }
         .port-wrapper[data-type="image"] .port { border-color: #b197fc; }
         .port-wrapper[data-type="text"] .port { border-color: #4dabf7; }
-
         .context-menu { position: absolute; display: none; z-index: 2000; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border: 1px solid #eee; border-radius: 12px; padding: 8px; color: #333; box-shadow: 0 10px 40px rgba(0,0,0,0.15); min-width: 150px; }
         .context-menu .menu-title { font-size: 11px; color: #aaa; padding: 4px 8px 8px; border-bottom: 1px solid #eee; margin-bottom: 4px; }
         .context-menu .menu-item { padding: 10px; font-size: 13px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; font-weight: 500;}
         .context-menu .menu-item:hover { background: #f0f4f8; color: #6c5ce7; }
-        
-        .combo-input { display: flex; gap: 5px; }
-        .combo-input input { flex: 1; }
     </style>
 </head>
 <body class="bg-grid">
-
     <div id="toolbar">
         <button class="tool-btn" onclick="newProject()" title="新建项目 (清空)"><i class="fas fa-file-medical"></i></button>
         <div style="width: 20px; height: 1px; background: #eee;"></div>
         <button class="tool-btn" onclick="viewport.style.cursor='grab'" title="平移视角"><i class="fas fa-hand"></i></button>
         <button class="tool-btn" onclick="centerCanvas()" title="视角归中"><i class="fas fa-compress-arrows-alt"></i></button>
     </div>
-
     <div id="right-panel">
         <div id="panel-toggle" onclick="toggleRightPanel()"><i class="fas fa-chevron-right" id="toggle-icon"></i></div>
         <div class="panel-tabs">
             <div class="panel-tab active" onclick="switchRightPanel('chat')">💬 灵感推演</div>
             <div class="panel-tab" onclick="switchRightPanel('settings')">⚙️ 设置</div>
         </div>
-        
         <div id="panel-chat" class="panel-content active">
             <div id="chat-window">
-                <div class="msg ai"><div class="bubble">✅ <b>致命 Bug 已修复：</b><br>1. 双击/右键空白处，必定弹出菜单！<br>2. 菜单节点将精确降落在你的鼠标尖端。<br>快试试看！</div></div>
+                <div class="msg ai"><div class="bubble">💡 <b>自由调用系统已激活：</b><br>1. 模型框不再受限，可直接填入后台复制的模型名 (如 <code>nano-banana-pro</code>)。<br>2. 尺寸框可清空或填入任意格式。</div></div>
             </div>
             <div class="chat-input-box">
                 <input id="chatModel" type="text" value="gpt-4o" style="padding:6px; border:1px solid #eee; border-radius:6px; font-size:12px; outline:none; width: 80px;" placeholder="对话模型" />
@@ -136,7 +110,6 @@
                 <button class="send-btn" onclick="sendChat()">发 送</button>
             </div>
         </div>
-
         <div id="panel-settings" class="panel-content">
             <div class="settings-area">
                 <label>画布背景风格</label>
@@ -154,393 +127,318 @@
             </div>
         </div>
     </div>
-
     <div id="viewport">
         <div id="canvas">
             <svg id="svg-layer"></svg>
             <div id="nodes-container"></div>
         </div>
     </div>
-
     <div id="add-menu" class="context-menu">
         <div class="menu-title">新建节点工具</div>
         <div class="menu-item" onclick="spawnNode('text')">📝 设定文案</div>
         <div class="menu-item" onclick="spawnNode('t2i')">🎨 AI 生图加工厂</div>
         <div class="menu-item" onclick="spawnNode('video')">🎬 AI 视频加工厂</div>
     </div>
-
     <script>
-        const viewport = document.getElementById('viewport');
-        const canvas = document.getElementById('canvas');
-        const svgLayer = document.getElementById('svg-layer');
-        const nodesContainer = document.getElementById('nodes-container');
+        window.addEventListener('DOMContentLoaded', () => {
+            const viewport = document.getElementById('viewport');
+            const canvas = document.getElementById('canvas');
+            const svgLayer = document.getElementById('svg-layer');
+            const nodesContainer = document.getElementById('nodes-container');
+            const nodeColors = ['#fceef2', '#eef5fc', '#eefcee', '#fcfbee', '#f5eefc', '#f5f5f5'];
 
-        const nodeColors = ['#fceef2', '#eef5fc', '#eefcee', '#fcfbee', '#f5eefc', '#f5f5f5'];
-        
-        let isCollapsed = false;
-        function toggleRightPanel() {
-            isCollapsed = !isCollapsed;
-            document.getElementById('right-panel').classList.toggle('collapsed', isCollapsed);
-            viewport.style.right = isCollapsed ? '0px' : '320px';
-            document.getElementById('toggle-icon').className = isCollapsed ? 'fas fa-chevron-left' : 'fas fa-chevron-right';
-        }
+            let isPanelCollapsed = false;
+            let connections = [];
+            let nodeDataStore = {};
+            let nodeIndex = 0;
+            const workflowData = {};
 
-        function switchRightPanel(tab) {
-            document.querySelectorAll('.panel-tab').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.panel-content').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById(`panel-${tab}`).classList.add('active');
-        }
-
-        function newProject() {
-            if(confirm("确定要新建项目吗？当前的画布将被清空！")) {
-                nodesContainer.innerHTML = ''; svgLayer.innerHTML = ''; connections = [];
-                Object.keys(workflowData).forEach(k => delete workflowData[k]);
-                centerCanvas();
+            function toggleRightPanel() {
+                isPanelCollapsed = !isPanelCollapsed;
+                document.getElementById('right-panel').classList.toggle('collapsed', isPanelCollapsed);
+                viewport.style.right = isPanelCollapsed ? '0px' : '320px';
+                document.getElementById('toggle-icon').className = isPanelCollapsed ? 'fas fa-chevron-left' : 'fas fa-chevron-right';
             }
-        }
-
-        let scale = 1, panX = 10000, panY = 10000, isPanning = false, startX, startY;
-        function updateCanvas() { canvas.style.transform = `translate(${panX - 10000}px, ${panY - 10000}px) scale(${scale})`; }
-        function centerCanvas() { panX = 10000; panY = 10000; scale = 1; updateCanvas(); updateAllWires(); }
-        centerCanvas();
-
-        viewport.addEventListener('mousedown', (e) => {
-            if(e.target.closest('.node') || e.target.closest('.port-wrapper')) return; 
-            if(e.button === 0) { isPanning = true; viewport.style.cursor = 'grabbing'; startX = e.clientX - panX; startY = e.clientY - panY; }
-        });
-        window.addEventListener('mousemove', (e) => {
-            if (!isPanning) return;
-            panX = e.clientX - startX; panY = e.clientY - startY;
-            updateCanvas();
-        });
-        window.addEventListener('mouseup', () => { isPanning = false; viewport.style.cursor = 'grab'; });
-        viewport.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const newScale = Math.min(Math.max(0.2, scale + (e.deltaY * -0.001)), 2);
-            const mouseX = e.clientX - panX - 60; const mouseY = e.clientY - panY;
-            panX -= mouseX * (newScale / scale - 1); panY -= mouseY * (newScale / scale - 1);
-            scale = newScale; updateCanvas(); updateAllWires();
-        }, { passive: false });
-
-        // ================= 完美修复菜单坐标算法 =================
-        let clickX = 0, clickY = 0;
-        function showMenu(e) {
-            if(e.target.closest('.node')) return;
-            e.preventDefault();
-            
-            // 采用 getBoundingClientRect 进行绝对严谨的坐标映射，无视任何缩放平移
-            const cvsRect = canvas.getBoundingClientRect();
-            clickX = (e.clientX - cvsRect.left) / scale;
-            clickY = (e.clientY - cvsRect.top) / scale;
-            
-            const menu = document.getElementById('add-menu');
-            menu.style.left = e.clientX + 'px'; menu.style.top = e.clientY + 'px';
-            menu.style.display = 'block';
-        }
-        // 支持双击或右键呼出菜单
-        viewport.addEventListener('dblclick', showMenu);
-        viewport.addEventListener('contextmenu', showMenu);
-        window.addEventListener('mousedown', (e) => { if(!e.target.closest('.context-menu')) document.getElementById('add-menu').style.display = 'none'; });
-
-        // ================= 绝对坐标磁吸连线系统 =================
-        let connections = []; 
-        let isWiring = false, tempWire = null, startPortConfig = null, magnetTarget = null;
-
-        function createBezier(x1, y1, x2, y2) {
-            const dx = Math.abs(x2 - x1) * 0.5 + 80;
-            return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
-        }
-
-        function getPortCoords(portEl) {
-            const rect = portEl.getBoundingClientRect();
-            const cvsRect = canvas.getBoundingClientRect();
-            return { x: (rect.left + rect.width/2 - cvsRect.left)/scale, y: (rect.top + rect.height/2 - cvsRect.top)/scale };
-        }
-
-        function updateAllWires() {
-            connections.forEach(c => {
-                const p1 = getPortCoords(c.outPort); const p2 = getPortCoords(c.inPort);
-                c.pathEl.setAttribute('d', createBezier(p1.x, p1.y, p2.x, p2.y));
-            });
-        }
-
-        window.addEventListener('mousedown', (e) => {
-            const port = e.target.closest('.port-out');
-            if (port) {
-                isWiring = true; 
-                startPortConfig = { el: port, type: port.dataset.type, nodeId: port.closest('.node').id };
-                tempWire = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                tempWire.setAttribute('class', 'wire temp');
-                svgLayer.appendChild(tempWire);
-                e.stopPropagation();
+            function switchRightPanel(tab) {
+                document.querySelectorAll('.panel-tab').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.panel-content').forEach(el => el.classList.remove('active'));
+                event.target.classList.add('active');
+                document.getElementById(`panel-${tab}`).classList.add('active');
             }
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (isWiring && tempWire) {
-                const p1 = getPortCoords(startPortConfig.el);
-                let mouseX = (e.clientX - canvas.getBoundingClientRect().left) / scale;
-                let mouseY = (e.clientY - canvas.getBoundingClientRect().top) / scale;
-                
-                if(magnetTarget) { magnetTarget.classList.remove('magnet-active'); magnetTarget = null; }
-                let minDist = 50; 
-
-                document.querySelectorAll('.port-in').forEach(inPort => {
-                    if(inPort.closest('.node').id === startPortConfig.nodeId) return;
-                    const rect = inPort.getBoundingClientRect();
-                    const portCenterX = rect.left + rect.width / 2;
-                    const portCenterY = rect.top + rect.height / 2;
-                    const dist = Math.hypot(e.clientX - portCenterX, e.clientY - portCenterY);
-                    if(dist < minDist) { minDist = dist; magnetTarget = inPort; }
-                });
-
-                if(magnetTarget) {
-                    magnetTarget.classList.add('magnet-active');
-                    const snapCoords = getPortCoords(magnetTarget);
-                    mouseX = snapCoords.x; mouseY = snapCoords.y;
+            function newProject() {
+                if(confirm("确定要新建项目吗？当前的画布将被清空！")) {
+                    nodesContainer.innerHTML = ''; svgLayer.innerHTML = ''; connections = [];
+                    centerCanvas();
                 }
-
-                tempWire.setAttribute('d', createBezier(p1.x, p1.y, mouseX, mouseY));
             }
-        });
-
-        window.addEventListener('mouseup', (e) => {
-            if (isWiring) {
-                if (magnetTarget) {
-                    createConnection(startPortConfig.el, magnetTarget);
-                    magnetTarget.classList.remove('magnet-active');
-                }
-                if (tempWire) tempWire.remove();
-                isWiring = false; startPortConfig = null; magnetTarget = null;
-            }
-        });
-
-        function createConnection(outPort, inPort) {
-            if(connections.find(c => c.outPort === outPort && c.inPort === inPort)) return;
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('class', 'wire connected');
-            svgLayer.appendChild(path);
-            
-            const conn = {
-                outNode: outPort.closest('.node').id, inNode: inPort.closest('.node').id,
-                outPort: outPort, inPort: inPort, pathEl: path, dataType: outPort.dataset.type 
-            };
-            connections.push(conn);
-            updateAllWires();
-            syncData(conn);
-        }
-
-        // ================= 万能节点工厂 =================
-        let nodeIndex = 0;
-        const workflowData = {}; 
-
-        window.spawnNode = function(type) { document.getElementById('add-menu').style.display='none'; buildNode(type, clickX, clickY); }
-
-        function buildNode(type, x, y, extraData = null) {
-            nodeIndex++; const nodeId = `node_${nodeIndex}`;
-            const node = document.createElement('div');
-            node.className = `node`; node.id = nodeId;
-            node.style.left = `${x}px`; node.style.top = `${y}px`;
-            node.style.backgroundColor = nodeColors[Math.floor(Math.random() * nodeColors.length)];
-
-            let html = '';
-            
-            if (type === 'text') {
-                html = `
-                    <div class="node-header"><span>📝 文本设定</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
-                    <div class="node-content">
-                        <textarea id="val_${nodeId}" rows="5" placeholder="写下场景设定..."></textarea>
-                    </div>
-                    <div class="port-wrapper port-out" data-type="text" style="top:50%;"><div class="port" title="输出文本"></div></div>`;
-            } 
-            else if (type === 't2i') {
-                html = `
-                    <div class="node-header"><span>🎨 AI 生图加工厂</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
-                    <div class="node-content">
-                        <label>模型名称 (可填任意模型)</label>
-                        <input id="model_${nodeId}" type="text" value="dall-e-3" placeholder="如: nano-banana-pro" />
-                        <label>尺寸/比例 (选填)</label>
-                        <div class="combo-input">
-                            <input id="size_${nodeId}" type="text" value="1024x1024" list="dl_${nodeId}" placeholder="留空, 或填 16:9..." />
-                            <datalist id="dl_${nodeId}">
-                                <option value="1024x1024"></option>
-                                <option value="1792x1024"></option>
-                                <option value="1024x1792"></option>
-                            </datalist>
-                        </div>
-                        <label>画面提示词</label>
-                        <textarea id="val_${nodeId}" rows="3" placeholder="左侧连线可自动填入..."></textarea>
-                        <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'image')">⚡ 开始生产独立图卡</button>
-                    </div>
-                    <div class="port-wrapper port-in" data-type="text" data-target="val_${nodeId}" style="top:210px;"><div class="port" title="接收提示词文本"></div></div>`;
-            }
-            else if (type === 'video') {
-                html = `
-                    <div class="node-header"><span>🎬 AI 视频加工厂</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
-                    <div class="node-content">
-                        <label>模型名称</label>
-                        <input id="model_${nodeId}" type="text" value="kling-v1" />
-                        <label>首帧参考图 (从独立图片连线过来)</label>
-                        <input id="ref_${nodeId}" type="text" readonly style="background:#e9ecef;" placeholder="等待右侧紫点连入..."/>
-                        <label>动态与运镜</label>
-                        <textarea id="val_${nodeId}" rows="2" placeholder="如：镜头缓慢推进..."></textarea>
-                        <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'video')">⚡ 开始渲染视频</button>
-                    </div>
-                    <div class="port-wrapper port-in" data-type="image" data-target="ref_${nodeId}" style="top:125px;"><div class="port" title="接收首帧图片"></div></div>
-                    <div class="port-wrapper port-in" data-type="text" data-target="val_${nodeId}" style="top:180px;"><div class="port" title="接收提示词文本"></div></div>`;
-            }
-            else if (type === 'res-img') {
-                html = `
-                    <div class="node-header" style="background:#fff; color:#333; border-bottom:1px solid #eee;">
-                        <span>🖼️ 图像产物</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i>
-                    </div>
-                    <div class="node-content" style="background:transparent;">
-                        <img src="${extraData.url}" class="media-preview" />
-                        <div class="action-row">
-                            <a class="action-btn" href="${extraData.url}" target="_blank" download="image.png"><i class="fas fa-download"></i> 下载</a>
-                        </div>
-                    </div>
-                    <div class="port-wrapper port-out" data-type="image" style="top:50%;"><div class="port" title="可连接到视频首帧"></div></div>`;
-            }
-
-            node.innerHTML = html;
-            
-            const header = node.querySelector('.node-header');
-            let isDragging = false, nx, ny, ix, iy;
-            header.addEventListener('mousedown', (e) => {
-                isDragging = true; nx = e.clientX; ny = e.clientY;
-                ix = parseFloat(node.style.left); iy = parseFloat(node.style.top);
-                document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
-                node.classList.add('selected');
-                e.stopPropagation();
+            let scale = 1, panX = 0, panY = 0, isPanning = false, startX, startY;
+            function updateCanvas() { canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
+            function centerCanvas() { panX = 0; panY = 0; scale = 1; updateCanvas(); updateAllWires(); }
+            centerCanvas();
+            viewport.addEventListener('mousedown', (e) => {
+                if(e.target.closest('.node') || e.target.closest('.port-wrapper')) return;
+                if(e.button === 0) { isPanning = true; viewport.style.cursor = 'grabbing'; startX = e.clientX - panX; startY = e.clientY - panY; }
             });
             window.addEventListener('mousemove', (e) => {
-                if(isDragging) {
-                    node.style.left = `${ix + (e.clientX - nx)/scale}px`; node.style.top = `${iy + (e.clientY - ny)/scale}px`;
-                    updateAllWires();
+                if (!isPanning) return;
+                panX = e.clientX - startX; panY = e.clientY - startY;
+                updateCanvas();
+            });
+            window.addEventListener('mouseup', () => { isPanning = false; viewport.style.cursor = 'grab'; });
+            viewport.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const newScale = Math.min(Math.max(0.2, scale + (e.deltaY * -0.001)), 2);
+                panX -= (e.clientX - 60) * (newScale / scale - 1);
+                panY -= e.clientY * (newScale / scale - 1);
+                scale = newScale; updateCanvas(); updateAllWires();
+            }, { passive: false });
+            let clickX = 200, clickY = 150;
+            function showMenu(e) {
+                console.log('✅ 双击事件触发！');
+                if(e.target.closest('.node') || e.target.closest('.port-wrapper')) return;
+                e.preventDefault();
+                clickX = 200 + (nodeIndex * 30);
+                clickY = 150;
+                const menu = document.getElementById('add-menu');
+                menu.style.left = e.clientX + 'px'; menu.style.top = e.clientY + 'px';
+                menu.style.display = 'block';
+            }
+            viewport.addEventListener('dblclick', (e) => {
+                if (e.target.closest('.node') || e.target.closest('.port-wrapper')) return;
+                e.preventDefault(); e.stopImmediatePropagation();
+                showMenu(e);
+            }, { capture: true });
+            viewport.addEventListener('contextmenu', showMenu);
+            window.addEventListener('mousedown', (e) => { if(!e.target.closest('.context-menu')) document.getElementById('add-menu').style.display = 'none'; });
+
+            let isWiring = false, tempWire = null, startPortConfig = null, magnetTarget = null;
+            function createBezier(x1, y1, x2, y2) {
+                const dx = Math.abs(x2 - x1) * 0.5 + 80;
+                return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+            }
+            function getPortCoords(portEl) {
+                const rect = portEl.getBoundingClientRect();
+                const cvsRect = canvas.getBoundingClientRect();
+                return { x: (rect.left + rect.width/2 - cvsRect.left)/scale, y: (rect.top + rect.height/2 - cvsRect.top)/scale };
+            }
+            function updateAllWires() {
+                connections.forEach(c => {
+                    const p1 = getPortCoords(c.outPort); const p2 = getPortCoords(c.inPort);
+                    c.pathEl.setAttribute('d', createBezier(p1.x, p1.y, p2.x, p2.y));
+                });
+            }
+            window.addEventListener('mousedown', (e) => {
+                const port = e.target.closest('.port-out');
+                if (port) {
+                    isWiring = true;
+                    startPortConfig = { el: port, type: port.dataset.type, nodeId: port.closest('.node').id };
+                    tempWire = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    tempWire.setAttribute('class', 'wire temp');
+                    svgLayer.appendChild(tempWire);
+                    e.stopPropagation();
                 }
             });
-            window.addEventListener('mouseup', () => isDragging = false);
-
-            nodesContainer.appendChild(node);
-            
-            if(type === 'text') {
-                const ta = document.getElementById(`val_${nodeId}`);
-                ta.addEventListener('input', () => { nodeDataStore[nodeId] = ta.value; pushDataDownstream(nodeId); });
-            } else if (type === 'res-img') {
-                nodeDataStore[nodeId] = extraData.url; 
+            window.addEventListener('mousemove', (e) => {
+                if (isWiring && tempWire) {
+                    const p1 = getPortCoords(startPortConfig.el);
+                    let mouseX = (e.clientX - canvas.getBoundingClientRect().left) / scale;
+                    let mouseY = (e.clientY - canvas.getBoundingClientRect().top) / scale;
+                    if(magnetTarget) { magnetTarget.classList.remove('magnet-active'); magnetTarget = null; }
+                    let minDist = 50;
+                    document.querySelectorAll('.port-in').forEach(inPort => {
+                        if(inPort.closest('.node').id === startPortConfig.nodeId) return;
+                        const rect = inPort.getBoundingClientRect();
+                        const dist = Math.hypot(e.clientX - (rect.left + rect.width / 2), e.clientY - (rect.top + rect.height / 2));
+                        if(dist < minDist) { minDist = dist; magnetTarget = inPort; }
+                    });
+                    if(magnetTarget) {
+                        magnetTarget.classList.add('magnet-active');
+                        const snapCoords = getPortCoords(magnetTarget);
+                        mouseX = snapCoords.x; mouseY = snapCoords.y;
+                    }
+                    tempWire.setAttribute('d', createBezier(p1.x, p1.y, mouseX, mouseY));
+                }
+            });
+            window.addEventListener('mouseup', (e) => {
+                if (isWiring) {
+                    if (magnetTarget) {
+                        createConnection(startPortConfig.el, magnetTarget);
+                        magnetTarget.classList.remove('magnet-active');
+                    }
+                    if (tempWire) tempWire.remove();
+                    isWiring = false; startPortConfig = null; magnetTarget = null;
+                }
+            });
+            function createConnection(outPort, inPort) {
+                if(connections.find(c => c.outPort === outPort && c.inPort === inPort)) return;
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('class', 'wire connected');
+                svgLayer.appendChild(path);
+                const conn = { outNode: outPort.closest('.node').id, inNode: inPort.closest('.node').id, outPort: outPort, inPort: inPort, pathEl: path, dataType: outPort.dataset.type };
+                connections.push(conn);
+                updateAllWires();
+                syncData(conn);
             }
-            return nodeId;
-        }
-
-        window.deleteNode = function(id) {
-            document.getElementById(id).remove();
-            const toRemove = connections.filter(c => c.outNode === id || c.inNode === id);
-            toRemove.forEach(c => c.pathEl.remove());
-            connections = connections.filter(c => c.outNode !== id && c.inNode !== id);
-            delete nodeDataStore[id];
-        }
-
-        // ================= 数据传递 =================
-        function pushDataDownstream(sourceNodeId) {
-            connections.forEach(conn => { if (conn.outNode === sourceNodeId) syncData(conn); });
-        }
-
-        function syncData(conn) {
-            const data = nodeDataStore[conn.outNode];
-            if (!data) return;
-
-            if (conn.dataType === conn.inPort.dataset.type) {
-                const targetInputId = conn.inPort.dataset.target;
-                const el = document.getElementById(targetInputId);
-                if (el) {
-                    el.value = data;
-                    conn.pathEl.classList.add('active-flow');
-                    el.style.backgroundColor = '#e6fcf5'; el.style.borderColor = '#20c997';
-                    setTimeout(() => { 
-                        conn.pathEl.classList.remove('active-flow');
-                        el.style.backgroundColor = '#fff'; el.style.borderColor = '#ced4da';
-                    }, 800);
+            window.spawnNode = function(type) { document.getElementById('add-menu').style.display='none'; buildNode(type, clickX, clickY); };
+            function buildNode(type, x, y, extraData = null) {
+                nodeIndex++; const nodeId = `node_${nodeIndex}`;
+                const node = document.createElement('div');
+                node.className = `node`; node.id = nodeId;
+                node.style.left = `${x}px`; node.style.top = `${y}px`;
+                node.style.backgroundColor = nodeColors[Math.floor(Math.random() * nodeColors.length)];
+                let html = '';
+                if (type === 'text') {
+                    html = `<div class="node-header"><span>📝 文本设定</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
+                        <div class="node-content"><textarea id="val_${nodeId}" rows="5" placeholder="写下场景设定..."></textarea></div>
+                        <div class="port-wrapper port-out" data-type="text" style="top:50%;"><div class="port" title="输出文本"></div></div>`;
+                } else if (type === 't2i') {
+                    html = `<div class="node-header"><span>🎨 AI 生图加工厂</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
+                        <div class="node-content">
+                            <label>模型名称 (可填任意模型)</label><input id="model_${nodeId}" type="text" value="dall-e-3" placeholder="如: nano-banana-pro" />
+                            <label>尺寸/比例 (选填，支持任意格式)</label><input id="size_${nodeId}" type="text" value="1024x1024" placeholder="留空, 或填 16:9..." />
+                            <label>画面提示词</label><textarea id="val_${nodeId}" rows="3" placeholder="左侧连线可自动填入..."></textarea>
+                            <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'image')">⚡ 开始生产独立图卡</button>
+                        </div>
+                        <div class="port-wrapper port-in" data-type="text" data-target="val_${nodeId}" style="top:190px;"><div class="port" title="接收提示词文本"></div></div>`;
+                } else if (type === 'video') {
+                    html = `<div class="node-header"><span>🎬 AI 视频加工厂</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
+                        <div class="node-content">
+                            <label>模型名称</label><input id="model_${nodeId}" type="text" value="kling-v1" />
+                            <label>首帧参考图</label><input id="ref_${nodeId}" type="text" readonly style="background:#e9ecef;" placeholder="等待图片连入..."/>
+                            <label>动态与运镜</label><textarea id="val_${nodeId}" rows="2" placeholder="如：镜头缓慢推进..."></textarea>
+                            <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'video')">⚡ 开始渲染视频</button>
+                        </div>
+                        <div class="port-wrapper port-in" data-type="image" data-target="ref_${nodeId}" style="top:125px;"><div class="port" title="接收首帧图片"></div></div>
+                        <div class="port-wrapper port-in" data-type="text" data-target="val_${nodeId}" style="top:180px;"><div class="port" title="接收提示词文本"></div></div>`;
+                } else if (type === 'res-img') {
+                    html = `<div class="node-header" style="background:#fff; color:#333; border-bottom:1px solid #eee;"><span>🖼️ 图像产物</span><i class="fas fa-times" onclick="deleteNode('${nodeId}')"></i></div>
+                        <div class="node-content" style="background:transparent;">
+                            <img src="${extraData.url}" class="media-preview" />
+                            <div class="action-row"><a class="action-btn" href="${extraData.url}" target="_blank" download="image.png"><i class="fas fa-download"></i> 下载</a></div>
+                        </div>
+                        <div class="port-wrapper port-out" data-type="image" style="top:50%;"><div class="port" title="可连接到视频首帧"></div></div>`;
+                }
+                node.innerHTML = html;
+                const header = node.querySelector('.node-header');
+                let isDragging = false, nx, ny, ix, iy;
+                header.addEventListener('mousedown', (e) => {
+                    isDragging = true; nx = e.clientX; ny = e.clientY;
+                    ix = parseFloat(node.style.left); iy = parseFloat(node.style.top);
+                    document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+                    node.classList.add('selected');
+                    e.stopPropagation();
+                });
+                window.addEventListener('mousemove', (e) => {
+                    if(isDragging) {
+                        node.style.left = `${ix + (e.clientX - nx)/scale}px`; node.style.top = `${iy + (e.clientY - ny)/scale}px`;
+                        updateAllWires();
+                    }
+                });
+                window.addEventListener('mouseup', () => isDragging = false);
+                nodesContainer.appendChild(node);
+                if(type === 'text') {
+                    const ta = document.getElementById(`val_${nodeId}`);
+                    ta.addEventListener('input', () => { nodeDataStore[nodeId] = ta.value; pushDataDownstream(nodeId); });
+                } else if (type === 'res-img') {
+                    nodeDataStore[nodeId] = extraData.url;
+                }
+                console.log(`🎉 节点 ${nodeId} 已生成 @ (${x.toFixed(0)}, ${y.toFixed(0)})`);
+                return nodeId;
+            }
+            window.deleteNode = function(id) {
+                document.getElementById(id).remove();
+                const toRemove = connections.filter(c => c.outNode === id || c.inNode === id);
+                toRemove.forEach(c => c.pathEl.remove());
+                connections = connections.filter(c => c.outNode !== id && c.inNode !== id);
+                delete nodeDataStore[id];
+            };
+            function pushDataDownstream(sourceNodeId) {
+                connections.forEach(conn => { if (conn.outNode === sourceNodeId) syncData(conn); });
+            }
+            function syncData(conn) {
+                const data = nodeDataStore[conn.outNode];
+                if (!data) return;
+                if (conn.dataType === conn.inPort.dataset.type) {
+                    const targetInputId = conn.inPort.dataset.target;
+                    const el = document.getElementById(targetInputId);
+                    if (el) {
+                        el.value = data;
+                        conn.pathEl.classList.add('active-flow');
+                        el.style.backgroundColor = '#e6fcf5'; el.style.borderColor = '#20c997';
+                        setTimeout(() => {
+                            conn.pathEl.classList.remove('active-flow');
+                            el.style.backgroundColor = '#fff'; el.style.borderColor = '#ced4da';
+                        }, 800);
+                    }
                 }
             }
-        }
-
-        // ================= API 请求核心逻辑 =================
-        window.runGenerator = async function(nodeId, type) {
-            const url = document.getElementById('global-url').value.replace(/\/$/, '');
-            const key = document.getElementById('global-key').value;
-            if(!url || !key) { alert("⚠️ 请先在右侧面板配置 API 接口和 Key！"); return; }
-
-            const btn = document.getElementById(`btn_${nodeId}`);
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 生产中...`; btn.disabled = true;
-
-            const srcNode = document.getElementById(nodeId);
-            const spawnX = parseFloat(srcNode.style.left) + 320; 
-            const spawnY = parseFloat(srcNode.style.top);
-
-            try {
-                if (type === 'image') {
-                    const model = document.getElementById(`model_${nodeId}`).value.trim();
-                    const prompt = document.getElementById(`val_${nodeId}`).value.trim();
-                    const size = document.getElementById(`size_${nodeId}`).value.trim();
-                    
-                    if(!prompt) throw new Error("提示词不能为空！");
-
-                    const payload = { model: model, prompt: prompt, n: 1 };
-                    if (size !== "") payload.size = size; 
-
-                    const res = await fetch(`${url}/images/generations`, {
+            window.runGenerator = async function(nodeId, type) {
+                const url = document.getElementById('global-url').value.replace(/\/$/, '');
+                const key = document.getElementById('global-key').value;
+                if(!url || !key) { alert("⚠️ 请先在右侧面板配置 API 接口和 Key！"); return; }
+                const btn = document.getElementById(`btn_${nodeId}`);
+                const originalText = btn.innerHTML;
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 生产中...`; btn.disabled = true;
+                const srcNode = document.getElementById(nodeId);
+                const spawnX = parseFloat(srcNode.style.left) + 320;
+                const spawnY = parseFloat(srcNode.style.top);
+                try {
+                    if (type === 'image') {
+                        const model = document.getElementById(`model_${nodeId}`).value.trim();
+                        const prompt = document.getElementById(`val_${nodeId}`).value.trim();
+                        const size = document.getElementById(`size_${nodeId}`).value.trim();
+                        if(!prompt) throw new Error("提示词不能为空！");
+                        const payload = { model: model, prompt: prompt, n: 1 };
+                        if (size !== "") payload.size = size;
+                        const res = await fetch(`${url}/images/generations`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await res.json();
+                        if(data.data && data.data[0].url) {
+                            buildNode('res-img', spawnX, spawnY, { url: data.data[0].url });
+                        } else {
+                            throw new Error(data.error ? data.error.message : JSON.stringify(data));
+                        }
+                    } else if (type === 'video') {
+                        const ref = document.getElementById(`ref_${nodeId}`).value;
+                        if(!ref) throw new Error("⚠️ 必须先连线一张独立图片作为首帧！");
+                        alert(`✅ 视频请求成功发送！\n使用了图片: ${ref.substring(0,30)}...`);
+                    }
+                } catch(e) { alert("生产失败:\n" + e.message); }
+                finally { btn.innerHTML = originalText; btn.disabled = false; }
+            };
+            let chatMem = [];
+            window.sendChat = async function() {
+                const url = document.getElementById('global-url').value.replace(/\/$/, '');
+                const key = document.getElementById('global-key').value;
+                const model = document.getElementById('chatModel').value;
+                const prompt = document.getElementById('chatInput').value;
+                if(!prompt || !key) return;
+                const win = document.getElementById('chat-window');
+                win.innerHTML += `<div class="msg user"><div class="bubble">${prompt}</div></div>`;
+                chatMem.push({role: "user", content: prompt});
+                document.getElementById('chatInput').value = '';
+                win.scrollTop = win.scrollHeight;
+                try {
+                    const res = await fetch(`${url}/chat/completions`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({ model: model, messages: chatMem })
                     });
                     const data = await res.json();
-                    
-                    if(data.data && data.data[0].url) {
-                        buildNode('res-img', spawnX, spawnY, { url: data.data[0].url });
-                    } else { 
-                        throw new Error(data.error ? data.error.message : JSON.stringify(data)); 
-                    }
-                } 
-                else if (type === 'video') {
-                    const ref = document.getElementById(`ref_${nodeId}`).value;
-                    if(!ref) throw new Error("⚠️ 必须先连线一张独立图片作为首帧！");
-                    alert(`✅ 视频请求成功发送！\n使用了图片: ${ref.substring(0,30)}...`);
-                }
-            } catch(e) { alert("生产失败:\n" + e.message); } 
-            finally { btn.innerHTML = originalText; btn.disabled = false; }
-        };
-
-        // ================= 聊天推演区 =================
-        let chatMem = [];
-        window.sendChat = async function() {
-            const url = document.getElementById('global-url').value.replace(/\/$/, '');
-            const key = document.getElementById('global-key').value;
-            const model = document.getElementById('chatModel').value;
-            const prompt = document.getElementById('chatInput').value;
-            if(!prompt || !key) return;
-
-            const win = document.getElementById('chat-window');
-            win.innerHTML += `<div class="msg user"><div class="bubble">${prompt}</div></div>`;
-            chatMem.push({role: "user", content: prompt});
-            document.getElementById('chatInput').value = '';
-            win.scrollTop = win.scrollHeight;
-
-            try {
-                const res = await fetch(`${url}/chat/completions`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-                    body: JSON.stringify({ model: model, messages: chatMem })
-                });
-                const data = await res.json();
-                const aiText = data.choices[0].message.content;
-                win.innerHTML += `<div class="msg ai"><div class="bubble">${aiText.replace(/\n/g, '<br>')}</div></div>`;
-                chatMem.push({role: "assistant", content: aiText});
-            } catch(e) { win.innerHTML += `<div class="msg ai"><div class="bubble">❌ ${e.message}</div></div>`; }
-            win.scrollTop = win.scrollHeight;
-        };
+                    const aiText = data.choices[0].message.content;
+                    win.innerHTML += `<div class="msg ai"><div class="bubble">${aiText.replace(/\n/g, '<br>')}</div></div>`;
+                    chatMem.push({role: "assistant", content: aiText});
+                } catch(e) { win.innerHTML += `<div class="msg ai"><div class="bubble">❌ ${e.message}</div></div>`; }
+                win.scrollTop = win.scrollHeight;
+            };
+            setTimeout(() => {
+                buildNode('text', 200, 150);
+                buildNode('t2i', 550, 150);
+            }, 500);
+        });
     </script>
 </body>
 </html>
