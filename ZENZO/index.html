@@ -90,10 +90,11 @@
     <div id="zenzo-logo">ZENZO<span>无限</span></div>
 
     <datalist id="img-sizes">
-        <option value="1024x1024">标准方形 (1024x1024)</option>
-        <option value="1920x1080">全高清宽屏 (1920x1080)</option>
-        <option value="16:9">宽屏比例 (16:9)</option>
-        <option value="9:16">手机竖屏 (9:16)</option>
+        <option value="1024x1024">标准方形 (适用DALL-E等)</option>
+        <option value="1024x1792">竖屏像素 (适用DALL-E等)</option>
+        <option value="1792x1024">宽屏像素 (适用DALL-E等)</option>
+        <option value="16:9">宽屏比例 (适用Midjourney等)</option>
+        <option value="9:16">手机竖屏 (适用Midjourney等)</option>
     </datalist>
 
     <div id="toolbar">
@@ -115,7 +116,7 @@
         </div>
         <div id="panel-chat" class="panel-content active">
             <div id="chat-window">
-                <div class="msg ai"><div class="bubble">🌌 <b>工程存档系统已上线：</b><br>点击左上角工具栏，你可以随时将当前的连线图存为 .zenzo 文件，方便下次继续工作！</div></div>
+                <div class="msg ai"><div class="bubble">🌌 <b>智能路由中心已就绪：</b><br>我现在能够自动区分 DALL-E、Gemini 和 o3-pro 的底层协议区别，大胆填入你想用的模型吧！</div></div>
             </div>
             <div class="chat-input-box">
                 <input id="chatModel" type="text" value="gpt-4o" style="padding:6px; border:1px solid #eee; border-radius:6px; font-size:12px; outline:none; width: 100px;" title="自由填写模型名称" placeholder="输入模型名称" />
@@ -132,13 +133,6 @@
                     <option value="bg-pure">极简沉浸白板</option>
                     <option value="bg-dark">暗黑创客模式</option>
                 </select>
-                <div style="height:1px; background:#eee; margin: 10px 0;"></div>
-                <div style="color: #6c5ce7; font-size: 12px; padding: 12px; background: #f0f4f8; border-radius: 8px; line-height: 1.6;">
-                    🚀 <b>万能接入模式已开启</b><br>
-                    你可以自由调用任何受支持的接口模型。<br>
-                    • <b>模型栏</b>：支持任意填入供应商提供的模型代号 (如 midjourney, kling-v1, veo3.1-fast)。<br>
-                    • <b>尺寸栏</b>：支持传统像素 (1024x1024) 或比例 (16:9)，甚至特殊参数。
-                </div>
             </div>
         </div>
     </div>
@@ -198,7 +192,6 @@
                 }
             };
 
-            // 核心新增：保存工程 (序列化节点和连线并生成文件下载)
             window.saveProject = function() {
                 const projectData = { nodes: [], conns: [] };
                 
@@ -229,7 +222,6 @@
                 downloadAnchorNode.remove();
             };
 
-            // 核心新增：加载工程 (解析文件并重建拓扑)
             window.loadProject = function(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -245,7 +237,7 @@
                             if (idNum > maxId) maxId = idNum;
                             
                             const prevIndex = nodeIndex;
-                            nodeIndex = idNum - 1; // 强制分配原来的ID
+                            nodeIndex = idNum - 1;
                             buildNode(n.type, n.x, n.y, { url: n.data.url });
                             nodeIndex = Math.max(prevIndex, maxId);
 
@@ -396,7 +388,7 @@
                 nodeIndex++; const nodeId = `node_${nodeIndex}`;
                 const node = document.createElement('div');
                 node.className = `node`; node.id = nodeId;
-                node.dataset.type = type; // 给序列化用的标记
+                node.dataset.type = type; 
                 node.style.left = `${x}px`; node.style.top = `${y}px`;
                 node.style.backgroundColor = nodeColors[0];
                 
@@ -416,7 +408,7 @@
                         <div class="node-content">
                             <label>指定模型</label>
                             <input id="model_${nodeId}" type="text" value="dall-e-3" placeholder="支持任意模型代号" />
-                            <label>尺寸或比例 (可自定义)</label>
+                            <label>尺寸或比例 (DALL-E请填像素)</label>
                             <input id="size_${nodeId}" type="text" value="1024x1024" list="img-sizes" placeholder="如 1024x1024 或 16:9" />
                             <label>画面提示词</label><textarea id="val_${nodeId}" rows="3" placeholder="左侧连线可自动填入..."></textarea>
                             <button class="run-node-btn" id="btn_${nodeId}" onclick="runGenerator('${nodeId}', 'image')"><i class="fas fa-magic"></i> 开始生成图像</button>
@@ -427,7 +419,7 @@
                         <div class="node-content">
                             <label>指定模型</label>
                             <input id="model_${nodeId}" type="text" value="veo3.1-fast" placeholder="支持 kling, veo 等视频模型" />
-                            <label>视频尺寸/比例 (可自定义)</label>
+                            <label>视频尺寸/比例</label>
                             <input id="size_${nodeId}" type="text" value="16:9" list="img-sizes" placeholder="如 16:9 或其它尺寸" />
                             <label>首帧参考图 (图片节点连入)</label>
                             <input id="ref_${nodeId}" type="text" readonly style="background:#e9ecef;" placeholder="等待图像连接..."/>
@@ -539,8 +531,21 @@
                         });
                         
                         const data = await res.json();
-                        if(res.ok && data.data && data.data[0].url) {
-                            buildNode('res-img', spawnX, spawnY, { url: data.data[0].url });
+                        let finalUrl = null;
+
+                        // 🟢 智能万能解析器：搞定不同的返回格式
+                        if (data.data && data.data[0] && data.data[0].url) {
+                            finalUrl = data.data[0].url; // OpenAI 标准格式
+                        } else if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
+                            // Gemini 原生 Base64 图片格式
+                            const b64 = data.candidates[0].content.parts[0].inlineData.data;
+                            finalUrl = `data:image/jpeg;base64,${b64}`; 
+                        } else if (data.url) {
+                            finalUrl = data.url; // 其他野路子 API
+                        }
+
+                        if(res.ok && finalUrl) {
+                            buildNode('res-img', spawnX, spawnY, { url: finalUrl });
                         } else {
                             throw new Error(data.error ? data.error.message : JSON.stringify(data));
                         }
@@ -610,7 +615,7 @@
                 win.scrollTop = win.scrollHeight;
             };
 
-            // 初始化测试节点（如果你想默认加载空画布，可以注释掉这三行）
+            // 初始化测试节点
             setTimeout(() => {
                 buildNode('text', 200, 150);
                 buildNode('t2i', 550, 150);
