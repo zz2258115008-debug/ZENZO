@@ -546,8 +546,17 @@
 
                         if(res.ok && finalUrl) {
                             buildNode('res-img', spawnX, spawnY, { url: finalUrl });
-                        } else {
-                            throw new Error(data.error ? data.error.message : JSON.stringify(data));
+                       } else {
+                            // 🚀 增强型报错雷达：深度挖掘所有的错误信息格式
+                            let errMsg = "API 请求失败";
+                            if (data.error) {
+                                if (typeof data.error === 'string') errMsg = data.error;
+                                else if (data.error.message) errMsg = data.error.message;
+                                else errMsg = JSON.stringify(data.error);
+                            } else {
+                                errMsg = JSON.stringify(data);
+                            }
+                            throw new Error(errMsg);
                         }
                     } else if (type === 'video') {
                         const model = document.getElementById(`model_${nodeId}`).value.trim();
@@ -574,7 +583,17 @@
                         } else if (res.ok && data.url) {
                             buildNode('res-video', spawnX, spawnY, { url: data.url });
                         } else {
-                            throw new Error(data.error ? data.error.message : JSON.stringify(data));
+                            // 🚀 增强型报错雷达：深度挖掘所有的错误信息格式
+                            let errMsg = "API 请求失败";
+                            if (data.error) {
+                                if (typeof data.error === 'string') errMsg = data.error;
+                                else if (data.error.message) errMsg = data.error.message;
+                                else errMsg = JSON.stringify(data.error);
+                            } else {
+                                errMsg = JSON.stringify(data);
+                            }
+                            throw new Error(errMsg);
+                        }
                         }
                     }
                 } catch(e) { 
@@ -624,3 +643,4 @@
     </script>
 </body>
 </html>
+
