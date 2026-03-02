@@ -93,8 +93,8 @@
         <option value="1024x1024">标准方形 (适用DALL-E等)</option>
         <option value="1024x1792">竖屏像素 (适用DALL-E等)</option>
         <option value="1792x1024">宽屏像素 (适用DALL-E等)</option>
-        <option value="16:9">宽屏比例 (适用Midjourney等)</option>
-        <option value="9:16">手机竖屏 (适用Midjourney等)</option>
+        <option value="16:9">宽屏比例 (适用Midjourney/Gemini等)</option>
+        <option value="9:16">手机竖屏 (适用Midjourney/Gemini等)</option>
     </datalist>
 
     <div id="toolbar">
@@ -116,7 +116,7 @@
         </div>
         <div id="panel-chat" class="panel-content active">
             <div id="chat-window">
-                <div class="msg ai"><div class="bubble">🌌 <b>智能路由中心已就绪：</b><br>我现在能够自动区分 DALL-E、Gemini 和 o3-pro 的底层协议区别，大胆填入你想用的模型吧！</div></div>
+                <div class="msg ai"><div class="bubble">🌌 <b>智能路由中心已就绪：</b><br>我现在能够自动区分 DALL-E、Gemini 和 o3-pro 的底层协议区别。前端增强报错探测已部署，不再显示空白错误。大胆填入你想用的模型吧！</div></div>
             </div>
             <div class="chat-input-box">
                 <input id="chatModel" type="text" value="gpt-4o" style="padding:6px; border:1px solid #eee; border-radius:6px; font-size:12px; outline:none; width: 100px;" title="自由填写模型名称" placeholder="输入模型名称" />
@@ -533,21 +533,19 @@
                         const data = await res.json();
                         let finalUrl = null;
 
-                        // 🟢 智能万能解析器：搞定不同的返回格式
                         if (data.data && data.data[0] && data.data[0].url) {
-                            finalUrl = data.data[0].url; // OpenAI 标准格式
-                        } else if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
-                            // Gemini 原生 Base64 图片格式
+                            finalUrl = data.data[0].url; 
+                        } else if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].inlineData) {
                             const b64 = data.candidates[0].content.parts[0].inlineData.data;
                             finalUrl = `data:image/jpeg;base64,${b64}`; 
                         } else if (data.url) {
-                            finalUrl = data.url; // 其他野路子 API
+                            finalUrl = data.url; 
                         }
 
                         if(res.ok && finalUrl) {
                             buildNode('res-img', spawnX, spawnY, { url: finalUrl });
-                       } else {
-                            // 🚀 增强型报错雷达：深度挖掘所有的错误信息格式
+                        } else {
+                            // 🚀 增强型报错雷达
                             let errMsg = "API 请求失败";
                             if (data.error) {
                                 if (typeof data.error === 'string') errMsg = data.error;
@@ -583,7 +581,7 @@
                         } else if (res.ok && data.url) {
                             buildNode('res-video', spawnX, spawnY, { url: data.url });
                         } else {
-                            // 🚀 增强型报错雷达：深度挖掘所有的错误信息格式
+                            // 🚀 增强型报错雷达
                             let errMsg = "API 请求失败";
                             if (data.error) {
                                 if (typeof data.error === 'string') errMsg = data.error;
@@ -593,7 +591,6 @@
                                 errMsg = JSON.stringify(data);
                             }
                             throw new Error(errMsg);
-                        }
                         }
                     }
                 } catch(e) { 
@@ -643,4 +640,3 @@
     </script>
 </body>
 </html>
-
