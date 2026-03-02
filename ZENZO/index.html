@@ -462,7 +462,7 @@
                         const payload = { model: model };
                         if (prompt) payload.prompt = prompt;
                         if (size) payload.size = size;
-                        if (refImg) payload.image_url = refImg;
+                        if (refImg) payload.images = [refImg];
                         
                         // 请求你自己的 Vercel 后端接口 /api/videos
                         const res = await fetch(`/api/videos`, {
@@ -527,4 +527,5 @@
         });
     </script>
 </body>
+
 </html>
