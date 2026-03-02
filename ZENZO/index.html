@@ -81,7 +81,6 @@
         .context-menu .menu-item { padding: 10px; font-size: 13px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; font-weight: 500;}
         .context-menu .menu-item:hover { background: #f0f4f8; color: #6c5ce7; }
         
-        /* 顶部 Logo 样式 */
         #zenzo-logo { position: absolute; top: 20px; left: 70px; z-index: 100; font-size: 24px; font-weight: 900; color: #2d3436; letter-spacing: -1px; text-shadow: 2px 2px 0px #fff, 4px 4px 0px rgba(108,92,231,0.2); pointer-events: none;}
         #zenzo-logo span { color: #6c5ce7; }
     </style>
@@ -98,7 +97,11 @@
     </datalist>
 
     <div id="toolbar">
-        <button class="tool-btn" onclick="newProject()" title="清空画布"><i class="fas fa-trash-alt"></i></button>
+        <button class="tool-btn" onclick="newProject()" title="新建工程 (清空)"><i class="fas fa-file-medical"></i></button>
+        <button class="tool-btn" onclick="document.getElementById('file-input').click()" title="载入项目 (.zenzo)"><i class="fas fa-folder-open"></i></button>
+        <button class="tool-btn" onclick="saveProject()" title="保存项目 (.zenzo)"><i class="fas fa-save"></i></button>
+        <input type="file" id="file-input" style="display:none" accept=".zenzo" onchange="loadProject(event)">
+        
         <div style="width: 20px; height: 1px; background: #eee;"></div>
         <button class="tool-btn" onclick="viewport.style.cursor='grab'" title="平移视角"><i class="fas fa-hand"></i></button>
         <button class="tool-btn" onclick="centerCanvas()" title="视角归中"><i class="fas fa-compress-arrows-alt"></i></button>
@@ -112,7 +115,7 @@
         </div>
         <div id="panel-chat" class="panel-content active">
             <div id="chat-window">
-                <div class="msg ai"><div class="bubble">🌌 <b>欢迎使用 ZENZO无限 引擎：</b><br>我已为你接通全网模型。无论是聊天、生图还是视频，你可以任意输入模型名称和分辨率尺寸，系统将自动适配。</div></div>
+                <div class="msg ai"><div class="bubble">🌌 <b>工程存档系统已上线：</b><br>点击左上角工具栏，你可以随时将当前的连线图存为 .zenzo 文件，方便下次继续工作！</div></div>
             </div>
             <div class="chat-input-box">
                 <input id="chatModel" type="text" value="gpt-4o" style="padding:6px; border:1px solid #eee; border-radius:6px; font-size:12px; outline:none; width: 100px;" title="自由填写模型名称" placeholder="输入模型名称" />
@@ -155,7 +158,6 @@
     </div>
     
     <script>
-        // HTML 转义函数，防止 XSS 攻击
         function escapeHTML(str) {
             return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
@@ -167,7 +169,7 @@
             const canvas = document.getElementById('canvas');
             const svgLayer = document.getElementById('svg-layer');
             const nodesContainer = document.getElementById('nodes-container');
-            const nodeColors = ['#f8f9fa']; // 统一极简风格
+            const nodeColors = ['#f8f9fa'];
 
             let isPanelCollapsed = false;
             let connections = [];
@@ -189,10 +191,94 @@
             };
 
             window.newProject = function() {
-                if(confirm("确定清空 ZENZO 无限画布吗？")) {
-                    nodesContainer.innerHTML = ''; svgLayer.innerHTML = ''; connections = [];
+                if(confirm("确定新建工程吗？当前画布将被清空！")) {
+                    nodesContainer.innerHTML = ''; svgLayer.innerHTML = ''; connections = []; nodeDataStore = {};
                     centerCanvas();
+                    nodeIndex = 0;
                 }
+            };
+
+            // 核心新增：保存工程 (序列化节点和连线并生成文件下载)
+            window.saveProject = function() {
+                const projectData = { nodes: [], conns: [] };
+                
+                document.querySelectorAll('.node').forEach(n => {
+                    const type = n.dataset.type; 
+                    let data = {};
+                    n.querySelectorAll('input, textarea').forEach(el => {
+                        const key = el.id.split('_')[0];
+                        data[key] = el.value;
+                    });
+                    if (type === 'res-img') data.url = n.querySelector('img').src;
+                    if (type === 'res-video') data.url = n.querySelector('video').src;
+
+                    projectData.nodes.push({ id: n.id, type: type, x: parseFloat(n.style.left), y: parseFloat(n.style.top), data: data });
+                });
+
+                projectData.conns = connections.map(c => ({
+                    outNode: c.outNode, inNode: c.inNode, dataType: c.dataType,
+                    outPortType: c.outPort.dataset.type, inPortTarget: c.inPort.dataset.target
+                }));
+
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", `ZENZO_Project_${new Date().getTime()}.zenzo`);
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            };
+
+            // 核心新增：加载工程 (解析文件并重建拓扑)
+            window.loadProject = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const project = JSON.parse(e.target.result);
+                        nodesContainer.innerHTML = ''; svgLayer.innerHTML = ''; connections = []; nodeDataStore = {};
+                        let maxId = 0;
+
+                        project.nodes.forEach(n => {
+                            const idNum = parseInt(n.id.split('_')[1]);
+                            if (idNum > maxId) maxId = idNum;
+                            
+                            const prevIndex = nodeIndex;
+                            nodeIndex = idNum - 1; // 强制分配原来的ID
+                            buildNode(n.type, n.x, n.y, { url: n.data.url });
+                            nodeIndex = Math.max(prevIndex, maxId);
+
+                            const createdNode = document.getElementById(n.id);
+                            if (createdNode) {
+                                createdNode.querySelectorAll('input, textarea').forEach(el => {
+                                    const key = el.id.split('_')[0];
+                                    if (n.data[key] !== undefined) el.value = n.data[key];
+                                });
+                                if (n.type === 'text') nodeDataStore[n.id] = createdNode.querySelector('textarea').value;
+                                if (n.type === 'res-img') nodeDataStore[n.id] = n.data.url;
+                            }
+                        });
+                        nodeIndex = maxId;
+
+                        setTimeout(() => {
+                            project.conns.forEach(c => {
+                                const outNode = document.getElementById(c.outNode);
+                                const inNode = document.getElementById(c.inNode);
+                                if (outNode && inNode) {
+                                    const outPort = outNode.querySelector(`.port-out[data-type="${c.dataType}"]`);
+                                    let inPort = c.inPortTarget 
+                                        ? inNode.querySelector(`.port-in[data-target="${c.inPortTarget}"]`)
+                                        : inNode.querySelector(`.port-in[data-type="${c.dataType}"]`);
+                                    if (outPort && inPort) createConnection(outPort, inPort);
+                                }
+                            });
+                            centerCanvas();
+                        }, 50);
+                    } catch (err) { alert("文件解析失败，请确保您选择的是有效的 .zenzo 文件！"); }
+                    event.target.value = ''; 
+                };
+                reader.readAsText(file);
             };
 
             let scale = 1, panX = 0, panY = 0, isPanning = false, startX, startY;
@@ -310,10 +396,10 @@
                 nodeIndex++; const nodeId = `node_${nodeIndex}`;
                 const node = document.createElement('div');
                 node.className = `node`; node.id = nodeId;
+                node.dataset.type = type; // 给序列化用的标记
                 node.style.left = `${x}px`; node.style.top = `${y}px`;
                 node.style.backgroundColor = nodeColors[0];
                 
-                // 边框颜色区分
                 if(type==='text') node.style.borderColor = '#4dabf7';
                 else if(type==='t2i') node.style.borderColor = '#b197fc';
                 else if(type==='video') node.style.borderColor = '#ff6b6b';
@@ -438,14 +524,12 @@
                 
                 try {
                     if (type === 'image') {
-                        // 图像生成：万能数据打包
                         const model = document.getElementById(`model_${nodeId}`).value.trim();
                         const prompt = document.getElementById(`val_${nodeId}`).value.trim();
                         const size = document.getElementById(`size_${nodeId}`).value.trim();
                         if(!prompt) throw new Error("请输入提示词！");
                         
                         const payload = { model: model, prompt: prompt, n: 1 };
-                        // 用户不管写了什么分辨率，全部直接打包发走
                         if (size) payload.size = size; 
                         
                         const res = await fetch(`/api/images`, {
@@ -461,7 +545,6 @@
                             throw new Error(data.error ? data.error.message : JSON.stringify(data));
                         }
                     } else if (type === 'video') {
-                        // 视频生成：终极修复版万能打包
                         const model = document.getElementById(`model_${nodeId}`).value.trim();
                         const prompt = document.getElementById(`val_${nodeId}`).value.trim();
                         const size = document.getElementById(`size_${nodeId}`).value.trim();
@@ -471,11 +554,9 @@
 
                         const payload = { model: model };
                         if (prompt) payload.prompt = prompt;
-                        if (size) payload.size = size; // 直接传递分辨率/比例
-                        // 核心修复：Apifox 文档要求图片为数组，且参数名叫 images
+                        if (size) payload.size = size; 
                         if (refImg) payload.images = [refImg]; 
                         
-                        // 请求你之前建好的后端
                         const res = await fetch(`/api/videos`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -529,7 +610,7 @@
                 win.scrollTop = win.scrollHeight;
             };
 
-            // 预加载两个空节点方便体验
+            // 初始化测试节点（如果你想默认加载空画布，可以注释掉这三行）
             setTimeout(() => {
                 buildNode('text', 200, 150);
                 buildNode('t2i', 550, 150);
